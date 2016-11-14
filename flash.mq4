@@ -6,9 +6,9 @@ input double profitPercent=0.9;
 int j=0;     
 void OnTick() 
   { 
-  if(Month()==6&&Day()==24){
-  return ;
- }
+   //if(Month()==6&&Day()==24){
+   //   return ;
+  // }
      // updateCounter(); 
       worker.onTick();
   } 
