@@ -57,13 +57,13 @@ void updateCounter(){
       double wasTrendValue=wasTrend();
       if(wasTrendValue!=0&&!haveOpenOrdersLocal&&!isDelayActive()){
          delayCounterForSell=0;
-         if(wasTrendValue<0){         
+         if(wasTrendValue>0){         
                //--- buy 
-               sendOrder(Ask,MathAbs(wasTrendValue),false,99999);
+               sendOrder(Ask,MathAbs(wasTrendValue),true,99999);
  
          }else{          
                //--- sell 
-               sendOrder(Bid,MathAbs(wasTrendValue),true,99998); 
+               sendOrder(Bid,MathAbs(wasTrendValue),false,99998); 
                               
          }
          
@@ -119,17 +119,18 @@ void updateCounter(){
   
   double wasTrend(){
    
-     double body=(iOpen(NULL,0,1)-iClose(NULL,0,1))*koef;
+     double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*koef;
      double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*koef;
       
       if(MathAbs(fullHeight)>FlashThreathhold&&MathAbs(body)>=MathAbs(fullHeight)*0.5){
-        if(body>0){
-				return fullHeight;
-			} 
-			else{
-				return -fullHeight; 
+        if(body<0){
+ 			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*koef; 
+ 	   	} 
+		   else{
+		      return (iClose(NULL,0,1)-iLow(NULL,0,1))*koef;
 			}      
-         
+            
+	       
       }else{
          return 0;
       }
@@ -208,27 +209,25 @@ void updateCounter(){
    }
 
 
- void sendOrder(double price,double profitValue, bool isSell,int MyMagicNumber ){
+ void sendOrder(double price,double profitValue, bool isBuy,int MyMagicNumber ){
   
       
       double takeprofitFinal=0; 
       double stoplossFinal=0;
       int ticket=0;
       double spreadCorrection=getSpreadCorrection();
-      if (isSell==true){
-      
-          takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*profitPercent/koef,Digits); 
-          stoplossFinal=NormalizeDouble(price+(profitValue+spreadCorrection)/koef*2,Digits);
-          ticket=OrderSend(Symbol(),OP_SELL,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Red); 
-         
-      }else{
-          takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*profitPercent/koef,Digits); 
-          stoplossFinal=NormalizeDouble(price-(profitValue-spreadCorrection)/koef*2,Digits);
-          ticket=OrderSend(Symbol(),OP_BUY,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Blue);//,clrNONE);      
+      if (isBuy==true){
+            takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*profitPercent/koef,Digits); 
+            stoplossFinal=NormalizeDouble(price-(profitValue-spreadCorrection)/koef*2,Digits);
+            ticket=OrderSend(Symbol(),OP_BUY,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Blue);//,clrNONE);      
+       }else{
+            takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*profitPercent/koef,Digits); 
+            stoplossFinal=NormalizeDouble(price+(profitValue+spreadCorrection)/koef*2,Digits);
+            ticket=OrderSend(Symbol(),OP_SELL,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Red); 
       }
       if(ticket<0) 
       { 
-         Print("OrderSend failed with error #",GetLastError()); 
+         Print("Order open failed with error #",GetLastError()); 
       } 
       else 
       {
