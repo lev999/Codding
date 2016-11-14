@@ -1,13 +1,14 @@
 
-input int         FlashThreathhold=21;
+input int         FlashThreshold=20;
 input double      Lot=0.1;
-input double profitPercent=0.9;
+input double      ProfitPercent=0.8;
+input double      MinusStopLossPercent=0.6;
 
 int j=0;     
 void OnTick() 
   { 
    //if(Month()==6&&Day()==24){
-   //   return ;
+  //   return ;
   // }
      // updateCounter(); 
       worker.onTick();
@@ -122,7 +123,7 @@ void updateCounter(){
      double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*koef;
      double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*koef;
       
-      if(MathAbs(fullHeight)>FlashThreathhold&&MathAbs(body)>=MathAbs(fullHeight)*0.5){
+      if(MathAbs(fullHeight)>FlashThreshold&&MathAbs(body)>=MathAbs(fullHeight)*0.5){
         if(body<0){
  			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*koef; 
  	   	} 
@@ -175,10 +176,12 @@ void updateCounter(){
        {
            if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
                  double profit=OrderProfit();
-                 if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
+                 
+                 double NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
+                 
+                if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
                      
                      double pips=profit/Lot/10;
-                     double NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
                      if(pips>=NonLossLevel){
                      
                            double SL    =OrderOpenPrice();    // SL of the selected order
@@ -191,7 +194,7 @@ void updateCounter(){
                      }
                 
                  }else{
-                      NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
+                     NonLossLevel=MathAbs(MinusStopLossPercent*(OrderStopLoss()-OrderOpenPrice())*koef);
                      if(profit<0&&MathAbs(profit)>=NonLossLevel){
                             SL    =OrderStopLoss();    // SL of the selected order
                             TP    =OrderOpenPrice();    // TP of the selected order
@@ -217,11 +220,11 @@ void updateCounter(){
       int ticket=0;
       double spreadCorrection=getSpreadCorrection();
       if (isBuy==true){
-            takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*profitPercent/koef,Digits); 
+            takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*ProfitPercent/koef,Digits); 
             stoplossFinal=NormalizeDouble(price-(profitValue-spreadCorrection)/koef*2,Digits);
             ticket=OrderSend(Symbol(),OP_BUY,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Blue);//,clrNONE);      
        }else{
-            takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*profitPercent/koef,Digits); 
+            takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*ProfitPercent/koef,Digits); 
             stoplossFinal=NormalizeDouble(price+(profitValue+spreadCorrection)/koef*2,Digits);
             ticket=OrderSend(Symbol(),OP_SELL,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Red); 
       }
