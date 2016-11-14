@@ -1,5 +1,5 @@
 
-input int         FlashThreathhold=20;
+input int         FlashThreathhold=21;
 input double      Lot=0.1;
 input double profitPercent=0.9;
 
@@ -119,10 +119,16 @@ void updateCounter(){
   
   double wasTrend(){
    
-      double value=(iOpen(NULL,0,1)-iClose(NULL,0,1))*koef;//(iHigh(NULL,0,1)-iLow(NULL,0,1))*koef;
+     double body=(iOpen(NULL,0,1)-iClose(NULL,0,1))*koef;
+     double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*koef;
       
-      if(MathAbs(value)>FlashThreathhold){
-         return value;       
+      if(MathAbs(fullHeight)>FlashThreathhold&&MathAbs(body)>=MathAbs(fullHeight)*0.5){
+        if(body>0){
+				return fullHeight;
+			} 
+			else{
+				return -fullHeight; 
+			}      
          
       }else{
          return 0;
@@ -167,9 +173,9 @@ void updateCounter(){
       for(int i=0;i<=OrdersTotal();i++) 
        {
            if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
-                   
-                 if(OrderProfit()>0&&OrderOpenPrice()!=OrderStopLoss()){
-                     double profit=OrderProfit();
+                 double profit=OrderProfit();
+                 if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
+                     
                      double pips=profit/Lot/10;
                      double NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
                      if(pips>=NonLossLevel){
@@ -179,10 +185,22 @@ void updateCounter(){
                            double Price =OrderOpenPrice();     // Price of the selected order
                            int    Ticket=OrderTicket();        // Ticket of the selected order         
                            bool Ans=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
-                           printf("Order modified:"+Ans);
+                           printf("Order modified(1):"+Ans);
                      
                      }
                 
+                 }else{
+                      NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
+                     if(profit<0&&MathAbs(profit)>=NonLossLevel){
+                            SL    =OrderStopLoss();    // SL of the selected order
+                            TP    =OrderOpenPrice();    // TP of the selected order
+                            Price =OrderOpenPrice();     // Price of the selected order
+                            Ticket=OrderTicket();        // Ticket of the selected order         
+                            Ans=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
+                           printf("Order modified(2):"+Ans);
+                        
+                     }
+                     
                  }             
              }
        
