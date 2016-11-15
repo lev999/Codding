@@ -1,12 +1,11 @@
 
-input int         FlashThreshold=20;
-input double      LossToBodyRate=2;
+input int         FlashThreshold=16;
+input double      LossToBodyRate=2.4;
 input double      ProfitToBodyRate=0.8;
-input double      MinusNonLossRate=0.6;
-input double      PlusNonLossRate=0.8;
-input double      HeightToBodyRate=0.5;
-
-input double      Lot=0.1;
+input double      MinusNonLossRate=0.9;
+input double      PlusNonLossRate=1.0;
+input double      HeightToBodyRate=0.4;
+input double      AvgLossValueInDollars=20;
 int j=0;     
 void OnTick() 
   { 
@@ -78,7 +77,7 @@ void updateCounter(){
  
          int orderLifeTimeMinutes;
          int orderDeactivationPeriod;
-         int koef;
+         int KOEF;
          int delayCounterForSell;
          int currentBar;
          int delayCounterLimit;
@@ -89,7 +88,7 @@ void updateCounter(){
       delayCounterLimit=3;
       currentBar=iBars(NULL,PERIOD_M5);
       delayCounterForSell=0;
-      koef=getKoef();
+      KOEF=getKoef();
   }
   
   bool isDelayActive(){
@@ -122,15 +121,15 @@ void updateCounter(){
   
   double wasTrend(){
    
-     double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*koef;
-     double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*koef;
+     double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;
+     double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF;
       
       if(MathAbs(fullHeight)>FlashThreshold&&MathAbs(body)>=MathAbs(fullHeight)*HeightToBodyRate){
         if(body<0){
- 			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*koef; 
+ 			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*KOEF; 
  	   	} 
 		   else{
-		      return (iClose(NULL,0,1)-iLow(NULL,0,1))*koef;
+		      return (iClose(NULL,0,1)-iLow(NULL,0,1))*KOEF;
 			}      
             
 	       
@@ -179,11 +178,11 @@ void updateCounter(){
            if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
                  double profit=OrderProfit();
                  
-                 double NonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*koef);
+                 double NonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);
                  
                 if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
                      
-                     double pips=profit/Lot/10;
+                     double pips=profit/OrderLots()/10;
                      if(pips>=NonLossLevel){
                      
                            double SL    =OrderOpenPrice();    // SL of the selected order
@@ -202,7 +201,7 @@ void updateCounter(){
                      }
                 
                  }else{
-                     NonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*koef);
+                     NonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
                      if(profit<0&&MathAbs(profit)>=NonLossLevel){
                             SL    =OrderStopLoss();    // SL of the selected order
                             TP    =OrderOpenPrice();    // TP of the selected order
@@ -229,26 +228,38 @@ void updateCounter(){
          }
    }
 
+ double getLot(double stopLossValue, double openPrice){
+   double pips=MathAbs(stopLossValue-openPrice)*KOEF;
+   double lot=NormalizeDouble(AvgLossValueInDollars/(10*pips), 2);
+   if(lot<0.01){
+      return 0;
+   }else{
+      return lot;
+   }   
+ }
 
  void sendOrder(double price,double profitValue, bool isBuy,int MyMagicNumber ){
-  
-      
+ 
       double takeprofitFinal=0; 
       double stoplossFinal=0;
       int ticket=0;
+      double volume=0;
       double spreadCorrection=getSpreadCorrection();
+      
       if (isBuy==true){
-            takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*ProfitToBodyRate/koef,Digits); 
-            stoplossFinal=NormalizeDouble(price-(profitValue-spreadCorrection)/koef*LossToBodyRate,Digits);
-            ticket=OrderSend(Symbol(),OP_BUY,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Blue);//,clrNONE);      
+            takeprofitFinal=NormalizeDouble(price+(profitValue+spreadCorrection)*ProfitToBodyRate/KOEF,Digits); 
+            stoplossFinal=NormalizeDouble(price-(profitValue-spreadCorrection)/KOEF*LossToBodyRate,Digits);
+            volume=getLot(stoplossFinal,price);
+            ticket=OrderSend(Symbol(),OP_BUY,volume,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Blue);//,clrNONE);      
        }else{
-            takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*ProfitToBodyRate/koef,Digits); 
-            stoplossFinal=NormalizeDouble(price+(profitValue+spreadCorrection)/koef*LossToBodyRate,Digits);
-            ticket=OrderSend(Symbol(),OP_SELL,Lot,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Red); 
+            takeprofitFinal=NormalizeDouble(price-(profitValue-spreadCorrection)*ProfitToBodyRate/KOEF,Digits); 
+            stoplossFinal=NormalizeDouble(price+(profitValue+spreadCorrection)/KOEF*LossToBodyRate,Digits);
+            volume=getLot(stoplossFinal,price);
+            ticket=OrderSend(Symbol(),OP_SELL,volume,price,3,stoplossFinal,takeprofitFinal,"My order",MyMagicNumber,0,Red); 
       }
       if(ticket<0) 
       { 
-         Print("Order open failed with error #",GetLastError()); 
+         Print("Order open failed with error #",GetLastError(),", profit:",takeprofitFinal,", loss:",stoplossFinal,", Lot:"+volume); 
       } 
       else 
       {
@@ -259,7 +270,7 @@ void updateCounter(){
   double getSpreadCorrection(){
    
    const double avgRealSpread=2.0;
-   double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*koef;
+   double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*KOEF;
    
    if(testerSpread>avgRealSpread){   
       return testerSpread-avgRealSpread;
