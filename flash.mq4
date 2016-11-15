@@ -3,6 +3,7 @@ input int         FlashThreshold=20;
 input double      Lot=0.1;
 input double      ProfitPercent=0.8;
 input double      MinusStopLossPercent=0.6;
+input double      PlusStopLossPercent=0.8;
 
 int j=0;     
 void OnTick() 
@@ -34,7 +35,7 @@ void updateCounter(){
     
    Flash() {           
         init();
-        printf("ManyNewsWorker, start working!");
+        printf("Flash, start working!");
        } 
  
  
@@ -64,8 +65,7 @@ void updateCounter(){
  
          }else{          
                //--- sell 
-               sendOrder(Bid,MathAbs(wasTrendValue),false,99998); 
-                              
+               sendOrder(Bid,MathAbs(wasTrendValue),false,99998);                               
          }
          
       }
@@ -177,7 +177,7 @@ void updateCounter(){
            if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
                  double profit=OrderProfit();
                  
-                 double NonLossLevel=MathAbs(0.8*(OrderTakeProfit()-OrderOpenPrice())*koef);
+                 double NonLossLevel=MathAbs(PlusStopLossPercent*(OrderTakeProfit()-OrderOpenPrice())*koef);
                  
                 if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
                      
@@ -188,9 +188,15 @@ void updateCounter(){
                            double TP    =OrderTakeProfit();    // TP of the selected order
                            double Price =OrderOpenPrice();     // Price of the selected order
                            int    Ticket=OrderTicket();        // Ticket of the selected order         
-                           bool Ans=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
-                           printf("Order modified(1):"+Ans);
-                     
+                           bool res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!                            
+                           if(!res){
+                              if(GetLastError()!=1){
+                                  Print("Error in OrderModify. Error code=",GetLastError()); 
+                              }                              
+                           }                                 
+                           else {
+                              Print("Order modified successfully."); 
+                           }                 
                      }
                 
                  }else{
@@ -200,9 +206,19 @@ void updateCounter(){
                             TP    =OrderOpenPrice();    // TP of the selected order
                             Price =OrderOpenPrice();     // Price of the selected order
                             Ticket=OrderTicket();        // Ticket of the selected order         
-                            Ans=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
-                           printf("Order modified(2):"+Ans);
-                        
+                            res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
+                            
+                           if(!res){
+                              if(GetLastError()!=1){
+                                  Print("Error in OrderModify. Error code=",GetLastError()); 
+                              }                              
+                           }                                 
+                           else {
+                              Print("Order modified successfully."); 
+                           }
+                                 
+                             
+                    
                      }
                      
                  }             
