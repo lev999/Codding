@@ -6,64 +6,53 @@ input double      MinusNonLossRate=0.9;
 input double      PlusNonLossRate=1.0;
 input double      HeightToBodyRate=0.4;
 input double      AvgLossValueInDollars=20;
-int j=0;     
+input double      OrderLifeTimeInUnits=20;
+extern int        delayCounterLimit=3;
+extern int        heartRatePeriod=100;
+
+    
 void OnTick() 
   { 
-   if(Month()==6&&Day()==24){
-     return ;
-   }
-     // updateCounter(); 
+      worker.heartRate(); 
       worker.onTick();
   } 
   
-  
-void updateCounter(){
-     j=j+1;
-     if(j==100){
-            worker.PrintMe(j);    
-     }   
-     if(j>100){
-         j=0;
-     } 
-}
-
-
-
- class Flash 
+class Flash 
   { 
   
  public:
     
-   Flash() {           
-        init();
+   Flash() {        
         printf("Flash, start working!");
+        init();
        } 
  
  
-  void PrintMe(string msg){
-      printf(msg);
- }
  
  void onTick(){
  
-      bool haveOpenOrdersLocal=haveOpenOrders();
+      bool haveOpenedOrdersLocal=haveOpenedOrders();
       
-      if(!haveOpenOrdersLocal&&delayCounterForSell!=-1){     
+      if(!haveOpenedOrdersLocal&&delayCounterForSell!=-1){     
          moveDelayCounter();
       }
       
-      if(haveOpenOrdersLocal){
+      if(haveOpenedOrdersLocal){
          setStopLossOnZero();
          return;
       }
+      
+ //     if(haveOpenedOrdersLocal){
+ //        checkLifeTime();
+ //        return;
+ //     }
  
       double wasTrendValue=wasTrend();
-      if(wasTrendValue!=0&&!haveOpenOrdersLocal&&!isDelayActive()){
+      if(wasTrendValue!=0&&!haveOpenedOrdersLocal&&!isDelayActive()){
          delayCounterForSell=0;
          if(wasTrendValue>0){         
                //--- buy 
-               sendOrder(Ask,MathAbs(wasTrendValue),true,99999);
- 
+               sendOrder(Ask,MathAbs(wasTrendValue),true,99999); 
          }else{          
                //--- sell 
                sendOrder(Bid,MathAbs(wasTrendValue),false,99998);                               
@@ -72,23 +61,54 @@ void updateCounter(){
       }
       
    }
- 
+   
+ void heartRate(){
+     heartRateCounter=heartRateCounter+1;
+     if(heartRateCounter==heartRatePeriod){
+           printf("still alive..."); 
+           return;   
+     }   
+     if(heartRateCounter>heartRatePeriod){
+         heartRateCounter=0;
+         return;
+     } 
+ }
  private:
  
+         int heartRateCounter;         
          int orderLifeTimeMinutes;
          int orderDeactivationPeriod;
          int KOEF;
          int delayCounterForSell;
-         int currentBar;
-         int delayCounterLimit;
+         int delayBarCounter;         
          double profitLevel;
+         int lifeTimeCursor;
+         int lifeTimeCounter;
+         
 
   void init(){
-  
-      delayCounterLimit=3;
-      currentBar=iBars(NULL,PERIOD_M5);
-      delayCounterForSell=0;
+      heartRateCounter=0;
       KOEF=getKoef();
+      
+      delayBarCounter=iBars(NULL,PERIOD_M5);      
+      delayCounterForSell=0;       
+          
+      lifeTimeCursor=iBars(NULL,PERIOD_M5);
+      lifeTimeCounter=0;
+  }
+  
+  void checkLifeTime(){
+    int newBar=iBars(NULL,PERIOD_M5);
+
+      if(lifeTimeCursor!=newBar){
+         lifeTimeCursor=newBar;
+         lifeTimeCounter=lifeTimeCounter+1;
+      }
+      
+      if(lifeTimeCounter>delayCounterLimit){
+         closeAllOrders();
+         lifeTimeCounter=0;
+      }  
   }
   
   bool isDelayActive(){
@@ -97,136 +117,112 @@ void updateCounter(){
       }else{
          delayCounterForSell=-1;
          return false;
-      }
-  
+      }  
   }
   
   void moveDelayCounter(){
-      int newBar=iBars(NULL,PERIOD_M5);
-
-      if(currentBar!=newBar){
-         currentBar=newBar;
+      int newBar=iBars(NULL,PERIOD_M5);      
+      if(delayBarCounter!=newBar){
+         delayBarCounter=newBar;
          delayCounterForSell=delayCounterForSell+1;
       }
   }
   
   
   int getKoef(){
-    int koefLocal=1; 
-    for (int i=1;i<Digits;i=i+1){
+      int koefLocal=1; 
+      for (int i=1;i<Digits;i=i+1){
          koefLocal=koefLocal*10;
       }
       return koefLocal;
   }
   
-  double wasTrend(){
-   
+  double wasTrend(){   
      double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;
      double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF;
       
       if(MathAbs(fullHeight)>FlashThreshold&&MathAbs(body)>=MathAbs(fullHeight)*HeightToBodyRate){
         if(body<0){
  			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*KOEF; 
- 	   	} 
-		   else{
+ 	   	}else{
 		      return (iClose(NULL,0,1)-iLow(NULL,0,1))*KOEF;
-			}      
-            
-	       
+			}   
       }else{
          return 0;
-      }
-      
+      }      
   }
  
   void closeAllOrders(){
-  int i=1;
-       while(i<=2){
-           i=i+1;
-           if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
-            int ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
-                if(ticket<0) 
-               { 
-                  Print("Order close try1 failed with error #",GetLastError()); 
-                  ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
-                  if(ticket<0){
-                   Print("Order close try2 failed with error #",GetLastError()); 
-                  }
- 
-               } 
-               else 
-               {
-                  Print("Order closed successfully"); 
-               }
-            }
-            
-       }
-         
+      bool runFlag=true;
+      while(runFlag){
+        if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
+            tryToCloseOrder();
+         }else{
+            runFlag=false;
+         }         
+      }            
   }
-   bool haveOpenOrders(){
   
-     if(OrdersTotal()>0){
+  void tryToCloseOrder(){
+      int ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
+      if(ticket<0) 
+      { 
+         Print("Order close try1 failed with error #",GetLastError()); 
+         ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
+         if(ticket<0){
+          Print("Order close try2 failed with error #",GetLastError()); 
+         }
+      }else{
+         Print("Order closed successfully"); 
+      }
+  }
+  
+   bool haveOpenedOrders(){
+      if(OrdersTotal()>0){
          return true;
-     }else{
+      }else{
          return false;
-     }
+      }
   }
  void setStopLossOnZero(){
-  
+      double profit=0;
+      double nonLossLevel=0;
       for(int i=0;i<=OrdersTotal();i++) 
        {
-           if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
-                 double profit=OrderProfit();
-                 
-                 double NonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);
-                 
-                if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){
-                     
-                     double pips=profit/OrderLots()/10;
-                     if(pips>=NonLossLevel){
-                     
-                           double SL    =OrderOpenPrice();    // SL of the selected order
-                           double TP    =OrderTakeProfit();    // TP of the selected order
-                           double Price =OrderOpenPrice();     // Price of the selected order
-                           int    Ticket=OrderTicket();        // Ticket of the selected order         
-                           bool res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!                            
-                           if(!res){
-                              if(GetLastError()!=1){
-                                  Print("Error in OrderModify. Error code=",GetLastError()); 
-                              }                              
-                           }                                 
-                           else {
-                              Print("Order modified successfully."); 
-                           }                 
-                     }
-                
-                 }else{
-                     NonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
-                     if(profit<0&&MathAbs(profit)>=NonLossLevel){
-                            SL    =OrderStopLoss();    // SL of the selected order
-                            TP    =OrderOpenPrice();    // TP of the selected order
-                            Price =OrderOpenPrice();     // Price of the selected order
-                            Ticket=OrderTicket();        // Ticket of the selected order         
-                            res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!  
-                            
-                           if(!res){
-                              if(GetLastError()!=1){
-                                  Print("Error in OrderModify. Error code=",GetLastError()); 
-                              }                              
-                           }                                 
-                           else {
-                              Print("Order modified successfully."); 
-                           }
-                                 
-                             
-                    
-                     }
-                     
-                 }             
-             }
-       
-         }
+         if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
+            profit=OrderProfit(); 
+            if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){ 
+               nonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);                    
+               double pips=profit/OrderLots()/10;
+               if(pips>=nonLossLevel){
+                  modifyOrder();       
+               }                
+            }else{
+               nonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
+               if(profit<0&&MathAbs(profit)>=nonLossLevel){
+                  modifyOrder();
+               }               
+            }             
+          }       
+        }
    }
+
+
+ void modifyOrder(){      
+      double SL    =OrderOpenPrice();    // SL of the selected order
+      double TP    =OrderTakeProfit();    // TP of the selected order
+      double Price =OrderOpenPrice();     // Price of the selected order
+      int    Ticket=OrderTicket();        // Ticket of the selected order         
+      bool res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!                            
+      if(!res){
+         if(GetLastError()!=1){
+             Print("Error in OrderModify. Error code=",GetLastError()); 
+         }                              
+      }                                 
+      else {
+         Print("Order modified successfully."); 
+      }          
+ }
 
  double getLot(double stopLossValue, double openPrice){
    double pips=MathAbs(stopLossValue-openPrice)*KOEF;
@@ -267,16 +263,15 @@ void updateCounter(){
       }     
   } 
   
-  double getSpreadCorrection(){
-   
-   const double avgRealSpread=2.0;
-   double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*KOEF;
-   
-   if(testerSpread>avgRealSpread){   
-      return testerSpread-avgRealSpread;
-   }else{
-      return 0;
-   }
+ double getSpreadCorrection(){
+      const double avgRealSpread=2.0;
+      double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*KOEF;
+      
+      if(testerSpread>avgRealSpread){   
+         return testerSpread-avgRealSpread;
+      }else{
+         return 0;
+      }
   }  
 };
 
