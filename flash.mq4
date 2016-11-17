@@ -1,12 +1,13 @@
 
 input int         FlashThreshold=16;
-input double      LossToBodyRate=2.4;
-input double      ProfitToBodyRate=0.8;
+input double      LossToTrendRate=1.9;
+input double      ProfitToTrendRate=0.8;
 input double      MinusNonLossRate=0.9;
-input double      PlusNonLossRate=1.0;
-input double      HeightToBodyRate=0.4;
-input double      AvgLossValueInDollars=20;
-input double      OrderLifeTimeInUnits=20;
+input double      PlusNonLossRate=1;
+input double      BodyToHeightRate=0.5;
+input double      MaxLossDollar=50;
+input double      OrderLifeTime=257;
+
 
 const int         delayCounterLimit=3;
 const int         heartRatePeriod=100;
@@ -14,7 +15,7 @@ const int         heartRatePeriod=100;
     
 void OnTick() 
   { 
-      worker.heartRate(); 
+     // worker.heartRate(); 
       worker.onTick();
   } 
   
@@ -40,22 +41,18 @@ class Flash
       
       if(haveOpenedOrdersLocal){
          setStopLossOnZero();
-         return;
       }
       
- //     if(haveOpenedOrdersLocal){
- //        checkLifeTime();
- //        return;
- //     }
+     if(haveOpenedOrdersLocal){
+        checkLifeTime();
+     }else{
+        lifeTimeCounter=0;
+     }
  
       double trendValue=getTrendValue();
       if(trendValue!=0&&!haveOpenedOrdersLocal&&!isDelayActive()){
          delayCounterForSell=0;
-         if(trendValue>0){
-            sendOrder(true,trendValue); //--- buy
-         }else{ 
-            sendOrder(false,trendValue); //--- sell                               
-         }         
+         sendOrder(trendValue);
       }
       
    }
@@ -103,7 +100,8 @@ class Flash
          lifeTimeCounter=lifeTimeCounter+1;
       }
       
-      if(lifeTimeCounter>delayCounterLimit){
+      if(lifeTimeCounter>OrderLifeTime){
+         printf("Closing orders by life Time limit");
          closeAllOrders();
          lifeTimeCounter=0;
       }  
@@ -139,7 +137,7 @@ class Flash
      double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;
      double fullHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF;
       
-      if(MathAbs(fullHeight)>FlashThreshold&&MathAbs(body)>=MathAbs(fullHeight)*HeightToBodyRate){
+      if(MathAbs(fullHeight)>FlashThreshold&&MathAbs(body/fullHeight)>=BodyToHeightRate){
         if(body<0){
  			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*KOEF; 
  	   	}else{
@@ -154,26 +152,28 @@ class Flash
       bool runFlag=true;
       while(runFlag){
         if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
-            tryToCloseOrder();
+            closeOrder();
          }else{
             runFlag=false;
          }         
       }            
   }
   
-  void tryToCloseOrder(){
-      int ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
-      if(ticket<0) 
-      { 
-         Print("Order close try1 failed with error #",GetLastError()); 
-         ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
-         if(ticket<0){
-          Print("Order close try2 failed with error #",GetLastError()); 
-         }
-      }else{
-         Print("Order closed successfully"); 
-      }
-  }
+  void closeOrder(){
+  
+   if(OrderType()==OP_BUY){
+      int ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
+   }else{
+      ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
+   }
+     
+   if(ticket<0) 
+   { 
+      Print("Order close failed with error #",GetLastError());          
+   }else{
+      Print("Order closed successfully"); 
+   } 
+ }
   
    bool haveOpenedOrders(){
       if(OrdersTotal()>0){
@@ -193,12 +193,16 @@ class Flash
                nonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);                    
                double pips=profit/OrderLots()/10;
                if(pips>=nonLossLevel){
-                  modifyOrder();       
+                  double SL = OrderOpenPrice();
+                  double TP = OrderTakeProfit();
+                  modifyOrder(TP,SL);       
                }                
             }else{
                nonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
-               if(profit<0&&MathAbs(profit)>=nonLossLevel){
-                  modifyOrder();
+               if(profit<0&&-profit>=nonLossLevel){
+                   SL = OrderStopLoss();
+                   TP = OrderOpenPrice(); 
+                   modifyOrder(TP,SL);
                }               
             }             
           }       
@@ -206,12 +210,11 @@ class Flash
    }
 
 
- void modifyOrder(){      
-      double SL    =OrderOpenPrice();    // SL of the selected order
-      double TP    =OrderTakeProfit();    // TP of the selected order
-      double Price =OrderOpenPrice();     // Price of the selected order
-      int    Ticket=OrderTicket();        // Ticket of the selected order         
-      bool res=OrderModify(Ticket,Price,SL,TP,0);//Modify it!                            
+ void modifyOrder( double TP, double SL){  
+ 
+      double Price =OrderOpenPrice();
+      int    Ticket=OrderTicket();          
+      bool res=OrderModify(Ticket,Price,SL,TP,0);                           
       if(!res){
          if(GetLastError()!=1){
              Print("Error in OrderModify. Error code=",GetLastError()); 
@@ -222,16 +225,16 @@ class Flash
       }          
  }
 
- double getLot(double stopLossValue,bool isBuy ){
+ double getLot(double stopLossValue,double trendValue ){
    double openPrice=0;
-   if(isBuy){
+   if(trendValue>0){
       openPrice=Ask;
    }else{
       openPrice=Bid;
    }
    
    double pips=MathAbs(stopLossValue-openPrice)*KOEF;
-   double lot=NormalizeDouble(AvgLossValueInDollars/(10*pips), 2);
+   double lot=NormalizeDouble(MaxLossDollar/(10*pips), 2);
    
    if(lot<0.01){
       return 0;
@@ -240,31 +243,31 @@ class Flash
    }   
  }
 
- double getTP(bool isBuy,double trendValue){
-   if(isBuy){
-      return   NormalizeDouble(Bid+(trendValue)*ProfitToBodyRate/KOEF,Digits);        
+ double getTP(double trendValue){
+   if(trendValue>0){
+      return   NormalizeDouble(Bid+MathAbs(trendValue)*ProfitToTrendRate/KOEF,Digits);        
    }else{
       double  spreadCorrection=getSpreadCorrection();
-      return  NormalizeDouble(Bid-(trendValue+spreadCorrection)*ProfitToBodyRate/KOEF,Digits);    
+      return  NormalizeDouble(Bid-(MathAbs(trendValue)+spreadCorrection)*ProfitToTrendRate/KOEF,Digits);    
    }
  }
 
- double getSL(bool isBuy,double trendValue){
-   if(isBuy){
-      return  NormalizeDouble(Bid-(trendValue)/KOEF*LossToBodyRate,Digits);     
+ double getSL(double trendValue){
+   if(trendValue>0){
+      return  NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);     
    }else{
       double  spreadCorrection=getSpreadCorrection();
-      return  NormalizeDouble(Bid+(trendValue+spreadCorrection)/KOEF*LossToBodyRate,Digits);     
+      return  NormalizeDouble(Bid+(MathAbs(trendValue)+spreadCorrection)/KOEF*LossToTrendRate,Digits);     
    }
  }
 
- void sendOrder(bool isBuy,double trendValue){
+ void sendOrder(double trendValue){
       int ticket=0;
  
-      double    tp=getTP(isBuy,trendValue);
-      double    sl=getSL(isBuy,trendValue);
-      double    volume=getLot(sl,isBuy);
-      if (isBuy==true){        
+      double    tp=getTP(trendValue);
+      double    sl=getSL(trendValue);
+      double    volume=getLot(sl,trendValue);
+      if (trendValue>0){ //buy       
             ticket=OrderSend(Symbol(),OP_BUY,volume,Ask,3,sl,tp,"My order",99999,0,Blue);//,clrNONE);      
        }else{//sell
             ticket=OrderSend(Symbol(),OP_SELL,volume,Bid,3,sl,tp,"My order",99998,0,Red); 
@@ -277,8 +280,6 @@ class Flash
          const double avgRealSpread=2.0;
          double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*KOEF;      
          return testerSpread-avgRealSpread;
-        
-      
   } 
   
    void printResult(int ticket,double tp, double sl,double volume){      
@@ -289,10 +290,9 @@ class Flash
       else 
       {
          Print("OrderSend placed successfully"); 
-      }     
-
+      }
   }
- 
+  
 };
 
 Flash worker; 
