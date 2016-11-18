@@ -183,23 +183,25 @@ class Flash
       }
   }
  void setStopLossOnZero(){
-      double profit=0;
-      double nonLossLevel=0;
+      double profitDollar=0;
+      double nonLossLevelPips=0;
+      double pips=0;
       for(int i=0;i<=OrdersTotal();i++) 
        {
          if(OrderSelect(i,SELECT_BY_POS,MODE_TRADES)){
-            profit=OrderProfit(); 
-            if(profit>0&&OrderOpenPrice()!=OrderStopLoss()){ 
-               nonLossLevel=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);                    
-               double pips=profit/OrderLots()/10;
-               if(pips>=nonLossLevel){
+            profitDollar=OrderProfit(); 
+            if(profitDollar>0&&OrderOpenPrice()!=OrderStopLoss()){ 
+               nonLossLevelPips=MathAbs(PlusNonLossRate*(OrderTakeProfit()-OrderOpenPrice())*KOEF);                    
+               pips=profitDollar/OrderLots()/10;
+               if(pips>=nonLossLevelPips){
                   double SL = OrderOpenPrice();
                   double TP = OrderTakeProfit();
                   modifyOrder(TP,SL);       
                }                
             }else{
-               nonLossLevel=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
-               if(profit<0&&-profit>=nonLossLevel){
+               nonLossLevelPips=MathAbs(MinusNonLossRate*(OrderStopLoss()-OrderOpenPrice())*KOEF);
+               pips=-profitDollar/OrderLots()/10;
+               if(profitDollar<0&&pips>=nonLossLevelPips){
                    SL = OrderStopLoss();
                    TP = OrderOpenPrice(); 
                    modifyOrder(TP,SL);
