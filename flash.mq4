@@ -12,6 +12,17 @@ input double      OrderLifeTime=257;
 const int         delayCounterLimit=3;
 const int         heartRatePeriod=100;
 
+
+double OnTester()
+{
+   double ret=0.0;
+   if (TesterStatistics(STAT_EQUITY_DD)>0){  
+      ret =  NormalizeDouble(TesterStatistics(STAT_PROFIT) / TesterStatistics(STAT_EQUITY_DD),2);
+   }else{
+         ret = 0;
+       }
+   return(ret);
+}
     
 void OnTick() 
   { 
