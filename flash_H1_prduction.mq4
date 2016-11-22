@@ -185,7 +185,7 @@ class Flash
      int maxCandleHistory=3;
      
      for(int i=2;i<=maxCandleHistory+1;i++){
-         avgCandle+=(iHigh(NULL,0,i)-iLow(NULL,0,i))*KOEF/maxCandleHistory;
+         avgCandle+=(iHigh(NULL,0,i)-iLow(NULL,0,i))*KOEF/(maxCandleHistory-1);
      }
 
      if(doPrints)   printf("trend/avg: "+NormalizeDouble(trendCandle/avgCandle,2)+" ("+NormalizeDouble(MinTrendToAvgCandle,2)+")");
