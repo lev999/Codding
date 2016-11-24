@@ -1,10 +1,10 @@
 
 input int         Threshold=10;
-input double      BodyToHeightRate=0.5;
-input double      MinTrendToAvgCandle=1.5;
-input double      LossToTrendRate=0.5;
-input double      ProfitToTrendRate=1.0;
-input double      NonLossMinusRate=0.8;
+input double      BodyToHeightRate=0.0;
+input double      MinTrendToAvgCandle=1.6;
+input double      LossToTrendRate=0.6;
+input double      ProfitToTrendRate=0.9;
+input double      NonLossMinusRate=10.0;
 input double      NonLossPlusRate=0.8;
 input double      OrderLifeTimeLimit=2;
 
@@ -12,7 +12,7 @@ input double      MaxLossDollar=50;
 
 
 
-const int         delayCounterLimit=3;
+const int         delayCounterLimit=0;
 const int         heartRatePeriod=100;
 
 
@@ -185,8 +185,8 @@ class Flash
      int maxCandleHistory=3;
      
      for(int i=2;i<=maxCandleHistory+1;i++){
-         avgCandle+=(iHigh(NULL,0,i)-iLow(NULL,0,i))*KOEF/(maxCandleHistory-1);
-     }
+           avgCandle+=(iHigh(NULL,0,i)-iLow(NULL,0,i))*KOEF/(maxCandleHistory-1);
+    }
 
      if(doPrints)   printf("trend/avg: "+NormalizeDouble(trendCandle/avgCandle,2)+" ("+NormalizeDouble(MinTrendToAvgCandle,2)+")");
      if((trendCandle/avgCandle)>=MinTrendToAvgCandle){
