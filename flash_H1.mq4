@@ -1,10 +1,10 @@
 
 input int         Threshold=10;
-input double      BodyToHeightRate=0.5;
-input double      MinTrendToAvgCandle=1.5;
-input double      LossToTrendRate=0.5;
-input double      ProfitToTrendRate=1.0;
-input double      NonLossMinusRate=0.8;
+input double      BodyToHeightRate=0.0;
+input double      MinTrendToAvgCandle=1.6;
+input double      LossToTrendRate=0.6;
+input double      ProfitToTrendRate=0.9;
+input double      NonLossMinusRate=10.0;
 input double      NonLossPlusRate=0.8;
 input double      OrderLifeTimeLimit=2;
 
@@ -12,7 +12,7 @@ input double      MaxLossDollar=50;
 
 
 
-const int         delayCounterLimit=3;
+const int         delayCounterLimit=0;
 const int         heartRatePeriod=100;
 
 
