@@ -2,7 +2,7 @@
 input int         Threshold=10;
 input double      TrendBodyToPrevRate=2;
 input double      LossToTrendRate=1;
-input double      ProfitToTrendRate=1;
+input double      ProfitToTrendRate=0.8;
 input double      NonLossMinusRate=0.8;
 input double      NonLossPlusRate=0.8;
 input double      OrderLifeTimeLimit=4;
@@ -186,22 +186,42 @@ class Flash
          if(body>historyBodyPipsMax)historyBodyPipsMax=body;                    
       }
       
+      
       double trendCandleBody=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;       
       double trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/historyBodyPipsMax,2));
       printf("trendToMaxBody:"+trendToMaxBody);      
       if(trendToMaxBody<TrendBodyToPrevRate)return 0;
+      if(wasTrendSuperBig(trendCandleBody,historyLevelMax,historyLevelMin))return 0;
       
       return getTrendBasedOnHistoryAnalize(trendCandleBody,historyLevelMax,historyLevelMin);    
     
   }
   
+  bool wasTrendSuperBig(double trendCandleBody, double historyLevelMax, double historyLevelMin){
+      string alertMsg="Trend superBig!";
+      if(trendCandleBody>0){
+          double trendLow=iLow(NULL,0,1);
+          if(trendLow<historyLevelMin){
+            printf(alertMsg);
+            return true;
+          }
+      }else{
+          double trendHigh=iHigh(NULL,0,1);
+          if(trendHigh>historyLevelMax){
+            printf(alertMsg);
+            return true;
+          }
+      }
+      return false;
+  }
+    
   double getTrendBasedOnHistoryAnalize(double trendCandleBody,double historyLevelMax, double historyLevelMin){
       double correctedLevel;
       double trendValuePips;
       double trendCloseLevel=iClose(NULL,0,1);
       
       if(trendCandleBody>0){
-      
+         
          correctedLevel=historyLevelMax+getSpread()*2;
          trendValuePips=(trendCloseLevel-historyLevelMin)*KOEF;
          
@@ -342,7 +362,7 @@ class Flash
        }else{//sell
             ticket=OrderSend(Symbol(),OP_SELL,volume,Bid,3,sl,tp,"My order",99998,0,Red); 
       }
-      printResult(ticket,tp,sl,volume);
+      alertResult(ticket,tp,sl,volume);
   } 
   
   double getSpreadCorrectionPips(){
@@ -353,7 +373,7 @@ class Flash
   } 
   
   
-   void printResult(int ticket,double tp, double sl,double volume){      
+   void alertResult(int ticket,double tp, double sl,double volume){      
         if(ticket<0) 
       { 
          Print("Order open failed with error #",GetLastError(),", profit:",tp,", loss:",sl,", Lot:"+volume); 
