@@ -1,17 +1,17 @@
 
 input int         Threshold=10;
 input double      TrendBodyToPrevRate=2;
-input double      LossToTrendRate=0.6;
-input double      ProfitToTrendRate=0.9;
-input double      NonLossMinusRate=10.0;
+input double      LossToTrendRate=1;
+input double      ProfitToTrendRate=1;
+input double      NonLossMinusRate=0.8;
 input double      NonLossPlusRate=0.8;
-input double      OrderLifeTimeLimit=2;
+input double      OrderLifeTimeLimit=4;
 input double      MaxLossDollar=50;
+input int         MaxCandleHistory=3;
 
 
 
-const int         delayCounterLimit=0;
-const int         heartRatePeriod=100;
+const int         delayCounterLimit=1;
 
 
 double OnTester()
@@ -25,7 +25,6 @@ double OnTester()
     
 void OnTick() 
   { 
-     // worker.heartRate(); 
       worker.onTick();
   } 
   
@@ -38,9 +37,7 @@ class Flash
         printf("Flash, start working!");
         init();
        } 
- 
- 
- 
+       
  void onTick(){
  
       bool haveOpenedOrders=(OrdersTotal()>0);
@@ -51,7 +48,7 @@ class Flash
            updateDelayStatus();
          }
          
-         double trendValue=getTrendValue();
+         double trendValue=getTrend();
          if(trendValue!=0&&!haveOpenedOrders&&!isDelayActive()){
             activateDelay();
             sendOrder(trendValue);
@@ -59,8 +56,6 @@ class Flash
          
          if(haveOpenedOrders)checkOrderLifeTimeLimit();
          else lifeTimeCounter=0;
-                  
-         return;
       }
  
        if(haveOpenedOrders){
@@ -87,7 +82,7 @@ class Flash
   void checkOrderLifeTimeLimit(){
       lifeTimeCounter=lifeTimeCounter+1;
       printf("Order life time: "+lifeTimeCounter+" ("+OrderLifeTimeLimit+")");      
-      if(lifeTimeCounter>OrderLifeTimeLimit){
+      if(lifeTimeCounter>=OrderLifeTimeLimit){
         printf("Order life time is over --> NonLoss");
         setNonLoss();        
         lifeTimeCounter=0;
@@ -156,27 +151,7 @@ class Flash
       return koefLocal;
   }
   
-  double getTrendValue(){   
-      double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;
-      double height=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF;
-      
-  //    printf("last: body/height: "+ MathAbs(NormalizeDouble(body/height,2))+", height: "+height+" ("+Threshold+")");
-  //    wasFlatBefore(height,true);//just for printing
-      
-      if(height>=Threshold){
-          if(isTrendHistoryValid(body,iClose(NULL,0,1))){
-               
-               if(body<0){
-       			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*KOEF; 
-       	   	}else{
-      		      return (iClose(NULL,0,1)-iLow(NULL,0,1))*KOEF;
-      			}   
-            }else{ 
-               return 0;
-            }      
-         }     
-  }
-  
+ 
   bool isGap(){
    double spreadPips=getSpread();
 
@@ -190,42 +165,59 @@ class Flash
   }
   
   
-  bool isTrendHistoryValid(double trendCandleBody,double trendCloseLevel){
-     double avgCandle=0;
-     int maxCandleHistory=3;
-     double porog;
-     double maxBody=0;
-     double spread=getSpread();
+  double getTrend(){
+  
+      if(isGap())return 0;
+      
+      double trendHeight=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF; 
+      if(trendHeight<Threshold)return 0;
+      
+      double historyLevelMax=0;
+      double historyLevelMin=100;
+      double historyBodyPipsMax=0;
      
-     if(isGap())return false;
+      for(int i=2;i<=MaxCandleHistory+1;i++){
+         double max=iHigh(NULL,0,i);
+         double min=iLow(NULL,0,i);
+         double body=MathAbs(iClose(NULL,0,i)-iOpen(NULL,0,i))*KOEF;
+         
+         if(max>historyLevelMax)historyLevelMax=max;
+         if(min<historyLevelMin)historyLevelMin=min;
+         if(body>historyBodyPipsMax)historyBodyPipsMax=body;                    
+      }
+      
+      double trendCandleBody=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;       
+      double trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/historyBodyPipsMax,2));
+      printf("trendToMaxBody:"+trendToMaxBody);      
+      if(trendToMaxBody<TrendBodyToPrevRate)return 0;
+      
+      return getTrendBasedOnHistoryAnalize(trendCandleBody,historyLevelMax,historyLevelMin);    
+    
+  }
+  
+  double getTrendBasedOnHistoryAnalize(double trendCandleBody,double historyLevelMax, double historyLevelMin){
+      double correctedLevel;
+      double trendValuePips;
+      double trendCloseLevel=iClose(NULL,0,1);
+      
+      if(trendCandleBody>0){
+      
+         correctedLevel=historyLevelMax+getSpread()*2;
+         trendValuePips=(trendCloseLevel-historyLevelMin)*KOEF;
+         
+         printf("level: "+correctedLevel+", trend:"+trendValuePips);
+         if((trendCloseLevel>correctedLevel))return trendValuePips;
+         else return 0;
+               
+      }else{
      
-     if(trendCandleBody>0){
-         porog=0;
-         for(int i=2;i<=maxCandleHistory+1;i++){
-            double max=iHigh(NULL,0,i);
-            if(max>porog)porog=max;
-            double body=MathAbs(iClose(NULL,0,i)-iOpen(NULL,0,i))*KOEF;
-            if(body>maxBody)maxBody=body;
-                       
-         }
-         double trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/maxBody,2));
-         printf("porogOpen: "+(trendCloseLevel-spread*2)+" trendToMaxBody:"+trendToMaxBody);
-         if((trendCloseLevel-spread*2>porog)&&(trendToMaxBody>TrendBodyToPrevRate))return true;
-         else return false;
-          
-     }else{
-         porog=100;
-         for(i=2;i<=maxCandleHistory+1;i++){
-            double min=iLow(NULL,0,i);
-            if(min<porog)porog=min;           
-             body=MathAbs(iClose(NULL,0,i)-iOpen(NULL,0,i))*KOEF;
-            if(body>maxBody)maxBody=body;
-         }
-         trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/maxBody,2));
-         printf("porogOpen: "+(trendCloseLevel+spread*2)+" trendToMaxBody:"+trendToMaxBody);
-         if((trendCloseLevel+spread*2<porog)&&(trendToMaxBody>TrendBodyToPrevRate))return true;
-         else return false;         
-     }
+         correctedLevel=historyLevelMin-getSpread()*2;
+         trendValuePips=(trendCloseLevel-historyLevelMax)*KOEF;
+         
+         printf("level: "+correctedLevel+", trend:"+trendValuePips);
+         if((trendCloseLevel<correctedLevel))return trendValuePips;
+         else return 0;         
+      }  
   }
  
   void closeAllOrders(){
