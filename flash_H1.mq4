@@ -1,13 +1,13 @@
 
 input int         Threshold=10;
 input double      TrendBodyToPrevRate=2;
-input double      LossToTrendRate=1;
-input double      ProfitToTrendRate=0.8;
-input double      NonLossMinusRate=0.8;
-input double      NonLossPlusRate=0.8;
-input double      OrderLifeTimeLimit=4;
+input double      LossToTrendRate=0.8;
+input double      ProfitToTrendRate=0.6;
+input double      NonLossMinusRate=1;
+input double      NonLossPlusRate=1;
+input double      OrderLifeTimeLimit=2;
 input double      MaxLossDollar=50;
-input int         MaxCandleHistory=3;
+input int         MaxCandleHistory=5;
 
 
 
@@ -83,7 +83,7 @@ class Flash
       lifeTimeCounter=lifeTimeCounter+1;
       printf("Order life time: "+lifeTimeCounter+" ("+OrderLifeTimeLimit+")");      
       if(lifeTimeCounter>=OrderLifeTimeLimit){
-        printf("Order life time is over --> NonLoss");
+        printf("Order life time is over --> NonLoss or close");
         setNonLoss();        
         lifeTimeCounter=0;
       }
@@ -107,10 +107,8 @@ class Flash
             double SL = OrderOpenPrice();
             double TP = OrderTakeProfit();
             modifyOrder(TP,SL);
-        }else{
-            SL = OrderStopLoss();
-            TP = OrderOpenPrice(); 
-            modifyOrder(TP,SL);
+        }else{           
+            closeAllOrders();
         }
          
      }                 
