@@ -1,13 +1,11 @@
 
 input int         Threshold=10;
-input double      BodyToHeightRate=0.0;
-input double      MinTrendToAvgCandle=1.6;
+input double      TrendBodyToPrevRate=2;
 input double      LossToTrendRate=0.6;
 input double      ProfitToTrendRate=0.9;
 input double      NonLossMinusRate=10.0;
 input double      NonLossPlusRate=0.8;
 input double      OrderLifeTimeLimit=2;
-
 input double      MaxLossDollar=50;
 
 
@@ -162,11 +160,11 @@ class Flash
       double body=(iClose(NULL,0,1)-iOpen(NULL,0,1))*KOEF;
       double height=(iHigh(NULL,0,1)-iLow(NULL,0,1))*KOEF;
       
-      printf("last: body/height: "+ MathAbs(NormalizeDouble(body/height,2))+", height: "+height+" ("+Threshold+")");
-      wasFlatBefore(height,true);//just for printing
+  //    printf("last: body/height: "+ MathAbs(NormalizeDouble(body/height,2))+", height: "+height+" ("+Threshold+")");
+  //    wasFlatBefore(height,true);//just for printing
       
       if(height>=Threshold){
-          if(wasFlatBefore(height,false)&&MathAbs(body/height)>=BodyToHeightRate){
+          if(isTrendHistoryValid(body,iClose(NULL,0,1))){
                
                if(body<0){
        			   return -(iHigh(NULL,0,1)-iClose(NULL,0,1))*KOEF; 
@@ -176,25 +174,58 @@ class Flash
             }else{ 
                return 0;
             }      
-         }
-     
+         }     
   }
   
-  bool wasFlatBefore(double trendCandle, bool doPrints){
+  bool isGap(){
+   double spreadPips=getSpread();
+
+   bool result=MathAbs(NormalizeDouble(iClose(NULL,0,1)-iOpen(NULL,0,0),Digits))>getSpread()*2;
+   if(result)printf("was Gap!");   
+   return result;
+  }
+  
+  double getSpread(){
+      return NormalizeDouble(MathAbs(Ask-Bid),Digits);
+  }
+  
+  
+  bool isTrendHistoryValid(double trendCandleBody,double trendCloseLevel){
      double avgCandle=0;
      int maxCandleHistory=3;
+     double porog;
+     double maxBody=0;
+     double spread=getSpread();
      
-     for(int i=2;i<=maxCandleHistory+1;i++){
-           avgCandle+=(iHigh(NULL,0,i)-iLow(NULL,0,i))*KOEF/(maxCandleHistory-1);
-    }
-
-     if(doPrints)   printf("trend/avg: "+NormalizeDouble(trendCandle/avgCandle,2)+" ("+NormalizeDouble(MinTrendToAvgCandle,2)+")");
-     if((trendCandle/avgCandle)>=MinTrendToAvgCandle){
-         if(doPrints)  printf("Trend detected!");
-         return true;
+     if(isGap())return false;
+     
+     if(trendCandleBody>0){
+         porog=0;
+         for(int i=2;i<=maxCandleHistory+1;i++){
+            double max=iHigh(NULL,0,i);
+            if(max>porog)porog=max;
+            double body=MathAbs(iClose(NULL,0,i)-iOpen(NULL,0,i))*KOEF;
+            if(body>maxBody)maxBody=body;
+                       
+         }
+         double trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/maxBody,2));
+         printf("porogOpen: "+(trendCloseLevel-spread*2)+" trendToMaxBody:"+trendToMaxBody);
+         if((trendCloseLevel-spread*2>porog)&&(trendToMaxBody>TrendBodyToPrevRate))return true;
+         else return false;
+          
      }else{
-         return false;
-     }  
+         porog=100;
+         for(i=2;i<=maxCandleHistory+1;i++){
+            double min=iLow(NULL,0,i);
+            if(min<porog)porog=min;           
+             body=MathAbs(iClose(NULL,0,i)-iOpen(NULL,0,i))*KOEF;
+            if(body>maxBody)maxBody=body;
+         }
+         trendToMaxBody=MathAbs(NormalizeDouble(trendCandleBody/maxBody,2));
+         printf("porogOpen: "+(trendCloseLevel+spread*2)+" trendToMaxBody:"+trendToMaxBody);
+         if((trendCloseLevel+spread*2<porog)&&(trendToMaxBody>TrendBodyToPrevRate))return true;
+         else return false;         
+     }
   }
  
   void closeAllOrders(){
@@ -239,6 +270,7 @@ class Flash
                if(pips>=nonLossLevelPips){
                   double SL = OrderOpenPrice();
                   double TP = OrderTakeProfit();
+                  printf("NonLoss by plus");
                   modifyOrder(TP,SL);       
                }                
             }else{
@@ -247,6 +279,7 @@ class Flash
                if(profitDollar<0&&pips>=nonLossLevelPips){
                    SL = OrderStopLoss();
                    TP = OrderOpenPrice(); 
+                   printf("NonLoss by minus");
                    modifyOrder(TP,SL);
                }               
             }             
@@ -292,7 +325,7 @@ class Flash
    if(trendValue>0){
       return   NormalizeDouble(Bid+MathAbs(trendValue)*ProfitToTrendRate/KOEF,Digits);        
    }else{
-      double  spreadCorrection=getSpreadCorrection();
+      double  spreadCorrection=getSpreadCorrectionPips();
       return  NormalizeDouble(Bid-(MathAbs(trendValue)+spreadCorrection)*ProfitToTrendRate/KOEF,Digits);    
    }
  }
@@ -301,7 +334,7 @@ class Flash
    if(trendValue>0){
       return  NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);     
    }else{
-      double  spreadCorrection=getSpreadCorrection();
+      double  spreadCorrection=getSpreadCorrectionPips();
       return  NormalizeDouble(Bid+(MathAbs(trendValue)+spreadCorrection)/KOEF*LossToTrendRate,Digits);     
    }
  }
@@ -320,12 +353,13 @@ class Flash
       printResult(ticket,tp,sl,volume);
   } 
   
-  double getSpreadCorrection(){
+  double getSpreadCorrectionPips(){
          // ? need to fix!
-         const double avgRealSpread=2.0;
-         double testerSpread=NormalizeDouble(MathAbs(Ask-Bid),Digits)*KOEF;      
-         return testerSpread-avgRealSpread;
+         const double avgRealSpreadPips=2.0;
+         double testerSpreadPips=getSpread()*KOEF; 
+         return testerSpreadPips-avgRealSpreadPips;
   } 
+  
   
    void printResult(int ticket,double tp, double sl,double volume){      
         if(ticket<0) 
