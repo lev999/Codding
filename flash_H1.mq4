@@ -1,7 +1,7 @@
 
 input int         Threshold=10;
 input double      TrendBodyToPrevRate=2;
-input double      LossToTrendRate=0.8;
+input double      LossToTrendRate=0.2;
 input double      ProfitToTrendRate=0.6;
 input double      NonLossMinusRate=1;
 input double      NonLossPlusRate=1;
@@ -341,11 +341,22 @@ class Flash
  }
 
  double getSL(double trendValue){
+   string msg="stopLoss too close --> break!";
    if(trendValue>0){
-      return  NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);     
+      double returnValue=NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);  
+      if(MathAbs((Bid-returnValue))*KOEF<5){
+         printf(msg);
+         return -1;
+      }
+      return returnValue;
    }else{
       double  spreadCorrection=getSpreadCorrectionPips();
-      return  NormalizeDouble(Bid+(MathAbs(trendValue)+spreadCorrection)/KOEF*LossToTrendRate,Digits);     
+      returnValue=NormalizeDouble(Bid+(MathAbs(trendValue)+spreadCorrection)/KOEF*LossToTrendRate,Digits);
+      if(MathAbs((Bid-returnValue))*KOEF<5){
+         printf(msg);
+         return -1;
+      }      
+      return returnValue;   
    }
  }
 
