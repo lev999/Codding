@@ -1,11 +1,11 @@
 
 input int         Threshold=10;
 input double      TrendBodyToPrevRate=2;
-input double      LossToTrendRate=0.2;
+input double      LossToTrendRate=0.3;
 input double      ProfitToTrendRate=0.6;
 input double      NonLossMinusRate=1;
 input double      NonLossPlusRate=1;
-input double      OrderLifeTimeLimit=2;
+input double      OrderLifeTimeLimit=20;
 input double      MaxLossDollar=50;
 input int         MaxCandleHistory=5;
 
@@ -343,7 +343,7 @@ class Flash
  double getSL(double trendValue){
    string msg="stopLoss too close --> break!";
    if(trendValue>0){
-      double returnValue=NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);  
+      double returnValue=NormalizeDouble(Bid-MathAbs(trendValue)/KOEF*LossToTrendRate,Digits);        
       if(MathAbs((Bid-returnValue))*KOEF<5){
          printf(msg);
          return -1;
