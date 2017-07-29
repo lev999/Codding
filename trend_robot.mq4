@@ -3,36 +3,31 @@ input double  MaxLossDollar=50;
 
 const int         timeFrame=PERIOD_H4;
 
-void OnTick() 
-  { 
-      worker.onTick();         
-  } 
+ 
   
-class Trend_robot 
-  { 
+class Trend_robot { 
   
  public:
-    
-   Trend_robot() {        
-        printf("Flat, start working!");
-        init();
-       } 
-       
+   
+   int KOEF;         
+   int lastOrderMagicNumber;
  
-
-
- void onTick(){
-      
-   if(OrdersTotal()==0){
-     evaluateNewOrder();        
-   }else {
-     evaluateNewOrder();
-   }
+ Trend_robot() {        
+      KOEF=getKoef();   
+      lastOrderMagicNumber=-9999;          
+ } 
+   
+ void onTick(){      
+      if(OrdersTotal()==0){
+        evaluateNewOrder();        
+      }else {
+        evaluateNewOrder();
+      }
  }
  
- 
- 
- void evaluateNewOrder(){}
+ void evaluateNewOrder(){
+   printf("Hi");
+ }
  
  
  void closeOrder(){
@@ -51,27 +46,8 @@ class Trend_robot
    } 
  }
  
-   
- private:        
-         int KOEF;
-         double b_lowBorder;
-         double b_highBorder;
-         double flatA;
-         
-         int     lastOrderType;
-         int     currentBar;
-         double  lossPips;
-         int     lastOrderMagicNumber;
-         bool    globalTradeBlock; 
-         int     unBlockTestTimer;
-         bool    isTrendMode;
-         
-   void init(){
-      KOEF=getKoef();   
-      currentBar=iBars(NULL,timeFrame); 
-      lastOrderMagicNumber=-9999;          
-   }
-
+       
+ 
   int getKoef(){
       int koefLocal=1; 
       for (int i=1;i<Digits;i=i+1){
@@ -112,11 +88,7 @@ class Trend_robot
      if (orderType==OP_BUY){ //buy       
             //sl=NormalizeDouble(Ask-lossPips/KOEF,Digits);             
             sl=NormalizeDouble(Ask-getHeightPips()/KOEF,Digits);
-            if(isTrendMode){
-               tp=0;
-            }else{
-               tp=NormalizeDouble(Bid+getHeightPips()/KOEF,Digits);
-            }
+            tp=NormalizeDouble(Bid+getHeightPips()/KOEF,Digits);
             
             volume=getLot(sl,orderType);
             colorOrder=Blue;            
@@ -124,13 +96,8 @@ class Trend_robot
      }else{//sell-
             //sl=NormalizeDouble(Bid+lossPips/KOEF,Digits); 
             sl=NormalizeDouble(Bid+getHeightPips()/KOEF,Digits);
-            if(isTrendMode){
-               tp=0;
-            }else{
-               tp=NormalizeDouble(Ask-getHeightPips()/KOEF,Digits);
-            }
-            
-            
+            tp=NormalizeDouble(Ask-getHeightPips()/KOEF,Digits);
+ 
             volume=getLot(sl,orderType);
             colorOrder=Red;
      }
@@ -139,29 +106,28 @@ class Trend_robot
    } 
   
   
-   double getHeightPips(){
-    return lossPips;
-   }
-  
+ double getHeightPips(){
+   return 0;
+ }  
 
-   int getMagicNumber(){
-      int num = 1 + 1000*MathRand()/32768;
-      printf("magic:"+num);
-      return num;
-   
-   }
+ int getMagicNumber(){
+   int num = 1 + 1000*MathRand()/32768;
+   printf("magic:"+num);
+   return num;   
+ }
 
-  void alertResult(int ticket,double tp, double sl,double volume){      
-        if(ticket<0) 
-      { 
-         Print("Order open failed with error #",GetLastError(),", price:",Bid,", TP:",tp,", SL:",sl,", Lot:"+volume); 
-      } 
-      else 
-      {
-         Print("OrderSend placed successfully"); 
-      }
-  }
+ void alertResult(int ticket,double tp, double sl,double volume){      
+   if(ticket<0) { 
+      Print("Order open failed with error #",GetLastError(),", price:",Bid,", TP:",tp,", SL:",sl,", Lot:"+volume); 
+   } 
+   else{
+      Print("OrderSend placed successfully"); 
+   }
+ }
   
 };
 
 Trend_robot worker; 
+ void OnTick() { 
+   worker.onTick();         
+ }
