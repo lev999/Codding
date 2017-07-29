@@ -26,7 +26,7 @@ class Trend_robot {
  }
  
  void evaluateNewOrder(){
-   printf("Hi");
+   printf("Hi ");
  }
  
  
