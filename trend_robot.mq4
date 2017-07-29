@@ -11,24 +11,154 @@ class Trend_robot {
    
    int KOEF;         
    int lastOrderMagicNumber;
- 
- Trend_robot() {        
+   int currentBar;
+
+ Trend_robot() {  
+      currentBar=0;
+       
       KOEF=getKoef();   
       lastOrderMagicNumber=-9999;          
  } 
    
  void onTick(){      
+     
+      if(OrdersTotal()!=0)return;
+      
+      if(!isNewBar())return;
+      
+      if(getBarBody()<10)return;
+      
+      if(wasLastClosedOrderInThisBar())return;
+      
+      evaluateNewOrder(); 
+ }
+ 
+ bool wasLastClosedOrderInThisBar(){
+   int i=OrdersHistoryTotal()-1;
+   if(OrderSelect(i, SELECT_BY_POS,MODE_HISTORY)){
+      
+   
+       int closedOrderHour=TimeHour(OrderCloseTime());
+       int currentHour=TimeHour(TimeCurrent());
+       printf("closedOrderHour "+closedOrderHour);
+       printf("currentHour "+currentHour);
+       
+       if(closedOrderHour==currentHour){
+         return true;
+       }else{
+         return false;
+       }        
+   }   
+   else{
       if(OrdersTotal()==0){
-        evaluateNewOrder();        
-      }else {
-        evaluateNewOrder();
+         printf("first order, empty history");
+         return false;  
       }
+   
+      printf("Error!!! FAILED to take order from history:"+GetLastError());
+      return true;
+   }
+ 
+ }
+  
+ double getBarBody(){
+   double barBody=MathAbs(iOpen(NULL,0,1)-iClose(NULL,0,1))*KOEF;
+   printf("body:"+barBody);
+   return barBody;
  }
  
+    int getMagicNumber(){
+      int num = 1 + 1000*MathRand()/32768;
+      printf("magic:"+num);
+      return num;
+   
+   }
+
  void evaluateNewOrder(){
-   printf("Hi ");
+ 
+   double extream;
+   double sl=-1;
+   double tp=-1;
+   int orderType;
+   color    colorOrder;   
+   
+      
+   if((iOpen(NULL,0,1)<iClose(NULL,0,1))){
+      // buy     
+      extream=iLow(NULL,0,1);
+      printf("extream:"+extream);
+      printf("Bid:"+Bid);
+      printf("Ask:"+Ask);
+      
+      if((MathAbs(Bid-extream)/2)*KOEF<10)return;
+      orderType=OP_BUY;
+      colorOrder=Blue;
+      
+      sl=Ask-(Ask-extream)/2;
+      tp=Bid+(Bid-extream)/2;
+     
+   }else{
+   // sell
+      extream=iHigh(NULL,0,1);
+      printf("extream:"+extream);
+      printf("Bid:"+Bid);
+      printf("Ask:"+Ask);
+
+      if((MathAbs(Bid-extream)/2)*KOEF<10)return;
+      orderType=OP_SELL;
+      colorOrder=Red;
+      sl=Bid+(extream-Bid)/2;
+      tp=Ask-(extream-Ask)/2;
+      
+   }
+   double volume=getLot(sl,orderType);
+   int ticket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
+   alertResult(ticket,tp,sl,volume);
+   printf("evaluateNewOrder");   
  }
  
+ 
+   double getLot(double stopLossValue,int orderType ){
+      double openPrice=0;
+      if(orderType==OP_BUY){
+         openPrice=Ask;
+      }else{
+         openPrice=Bid;
+      }
+      
+      double pips=MathAbs(stopLossValue-openPrice)*KOEF;
+      double lot=NormalizeDouble(MaxLossDollar/(10*pips), 2);
+      
+      if(lot<0.01){
+         printf("Error: lot <0.01");
+         return 0;
+      }else{
+         return lot;
+      }   
+   }
+ 
+  void alertResult(int ticket,double tp, double sl,double volume){      
+        if(ticket<0) 
+      { 
+         Print("Order open failed with error #",GetLastError(),", profit:",tp,", loss:",sl,", Lot:"+volume); 
+      } 
+      else 
+      {
+         Print("OrderSend placed successfully"); 
+      }
+  }
+
+ bool isNewBar(){
+      int bar=iBars(NULL,PERIOD_CURRENT);
+      if(currentBar!=bar){
+         currentBar=bar;
+         return true;
+      }else{
+         return false;
+      }
+  }
+ 
+
  
  void closeOrder(){
   
@@ -56,26 +186,7 @@ class Trend_robot {
       return koefLocal;
   }
 
-  double getLot(double stopLossValue,int orderType ){
-      double openPrice=0;
-      if(orderType==OP_BUY){
-         openPrice=Ask;
-      }else{
-         openPrice=Bid;
-      }
-      
-      double pips=MathAbs(stopLossValue-openPrice)*KOEF;
-      double lot=NormalizeDouble(MaxLossDollar/(10*pips), 2);
-      
-      if(lot<0.01){
-         printf("Error: lot <0.01");
-         return 0;
-      }else{
-         return lot;
-      }   
-   }
- 
-   void sendOrder(int orderType){
+    void sendOrder(int orderType){
       int      ticket=0; 
       double   tp;
       double   sl;
@@ -110,20 +221,8 @@ class Trend_robot {
    return 0;
  }  
 
- int getMagicNumber(){
-   int num = 1 + 1000*MathRand()/32768;
-   printf("magic:"+num);
-   return num;   
- }
 
- void alertResult(int ticket,double tp, double sl,double volume){      
-   if(ticket<0) { 
-      Print("Order open failed with error #",GetLastError(),", price:",Bid,", TP:",tp,", SL:",sl,", Lot:"+volume); 
-   } 
-   else{
-      Print("OrderSend placed successfully"); 
-   }
- }
+
   
 };
 
