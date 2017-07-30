@@ -40,10 +40,11 @@ class Trend_robot {
    
        int closedOrderHour=TimeHour(OrderCloseTime());
        int currentHour=TimeHour(TimeCurrent());
-       printf("closedOrderHour "+closedOrderHour);
-       printf("currentHour "+currentHour);
        
-       if(closedOrderHour==currentHour){
+       int closedOrderDay=TimeDay(OrderCloseTime());
+       int currentDay=TimeDay(TimeCurrent());
+       
+       if(closedOrderHour==currentHour&&closedOrderDay==currentDay){
          return true;
        }else{
          return false;
