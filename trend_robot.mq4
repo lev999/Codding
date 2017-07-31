@@ -12,16 +12,21 @@ class Trend_robot {
    int KOEF;         
    int lastOrderMagicNumber;
    int currentBar;
+   int currentOrderTicket;
 
  Trend_robot() {  
       currentBar=0;
        
       KOEF=getKoef();   
-      lastOrderMagicNumber=-9999;          
+      lastOrderMagicNumber=-9999;  
+      currentOrderTicket=-1;        
  } 
    
  void onTick(){      
      
+      
+      checkOrderTimeOut();
+      
       if(OrdersTotal()!=0)return;
       
       if(!isNewBar())return;
@@ -33,6 +38,25 @@ class Trend_robot {
       evaluateNewOrder(); 
  }
  
+ void checkOrderTimeOut(){
+   if(OrdersTotal()!=0){
+      if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
+       
+          int openedOrderHour=TimeHour(OrderOpenTime());
+          int currentHour=TimeHour(TimeCurrent());
+          int openedOrderDay=TimeDay(OrderOpenTime());
+          int currentDay=TimeDay(TimeCurrent());
+
+          if(openedOrderDay!=currentDay|| (currentHour>=openedOrderHour+8)){          
+            printf("Order closing by timeOut");
+            closeOrder();
+          }else{
+            return ;
+          }        
+      }   
+   }   
+ }
+  
  bool wasLastClosedOrderInThisBar(){
    int i=OrdersHistoryTotal()-1;
    if(OrderSelect(i, SELECT_BY_POS,MODE_HISTORY)){
@@ -96,7 +120,7 @@ class Trend_robot {
       colorOrder=Blue;
       
       sl=Ask-(Ask-extream)/2;
-      tp=Bid+(Bid-extream)/2;
+      tp=Bid+(Bid-extream);
      
    }else{
    // sell
@@ -109,12 +133,12 @@ class Trend_robot {
       orderType=OP_SELL;
       colorOrder=Red;
       sl=Bid+(extream-Bid)/2;
-      tp=Ask-(extream-Ask)/2;
+      tp=Ask-(extream-Ask);
       
    }
    double volume=getLot(sl,orderType);
-   int ticket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
-   alertResult(ticket,tp,sl,volume);
+   currentOrderTicket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
+   alertResult(currentOrderTicket,tp,sl,volume);
    printf("evaluateNewOrder");   
  }
  
@@ -186,44 +210,6 @@ class Trend_robot {
       }
       return koefLocal;
   }
-
-    void sendOrder(int orderType){
-      int      ticket=0; 
-      double   tp;
-      double   sl;
-      double   volume;
-      color    colorOrder;   
-      
-      lastOrderMagicNumber=getMagicNumber();  
-    
-      
-     if (orderType==OP_BUY){ //buy       
-            //sl=NormalizeDouble(Ask-lossPips/KOEF,Digits);             
-            sl=NormalizeDouble(Ask-getHeightPips()/KOEF,Digits);
-            tp=NormalizeDouble(Bid+getHeightPips()/KOEF,Digits);
-            
-            volume=getLot(sl,orderType);
-            colorOrder=Blue;            
-             
-     }else{//sell-
-            //sl=NormalizeDouble(Bid+lossPips/KOEF,Digits); 
-            sl=NormalizeDouble(Bid+getHeightPips()/KOEF,Digits);
-            tp=NormalizeDouble(Ask-getHeightPips()/KOEF,Digits);
- 
-            volume=getLot(sl,orderType);
-            colorOrder=Red;
-     }
-      ticket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",lastOrderMagicNumber,0,colorOrder); 
-      alertResult(ticket,tp,sl,volume);
-   } 
-  
-  
- double getHeightPips(){
-   return 0;
- }  
-
-
-
   
 };
 
