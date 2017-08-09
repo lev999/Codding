@@ -1,7 +1,8 @@
+#include <PatternBuilder.mqh>
 
 input double  MaxLossDollar=50;
 
-const int         timeFrame=PERIOD_H4;
+const int   timeFrame=PERIOD_H4;
 
  
   
@@ -24,7 +25,9 @@ class Trend_robot {
    
  void onTick(){      
      
+      PatternBuilder *patternBuilder = new PatternBuilder();
       
+      Pattern pat=patternBuilder.getPattern();
       checkOrderTimeOut();
       
       if(OrdersTotal()!=0)return;
@@ -186,11 +189,11 @@ class Trend_robot {
 
  
  void closeOrder(){
-  
+  int ticket;
    if(OrderType()==OP_BUY){
-      int ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
+       ticket=OrderClose(OrderTicket(),OrderLots(),Bid,100,Red);
    }else{
-      ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
+       ticket=OrderClose(OrderTicket(),OrderLots(),Ask,100,Red);
    }
      
    if(ticket<0) 
