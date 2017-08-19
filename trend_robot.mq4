@@ -1,10 +1,8 @@
 #include <PatternBuilder.mqh>
+#include <Shared.mqh>
 
 input double  MaxLossDollar=50;
-
 const int   timeFrame=PERIOD_H4;
-
- 
   
 class Trend_robot { 
   
@@ -14,31 +12,36 @@ class Trend_robot {
    int lastOrderMagicNumber;
    int currentBar;
    int currentOrderTicket;
-
+   PatternBuilder *patternBuilder; 
+   Shared *shared; 
+   
  Trend_robot() {  
       currentBar=0;
-       
-      KOEF=getKoef();   
+      patternBuilder = new PatternBuilder(); 
+      shared = new Shared(); 
+      KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
-      currentOrderTicket=-1;        
+      currentOrderTicket=-1;
+      patternBuilder.publishPattern(1.0,1.0,10);        
  } 
    
- void onTick(){      
-     
-      PatternBuilder *patternBuilder = new PatternBuilder();
-      
-      Pattern pat=patternBuilder.getPattern();
+ void onTick(){
+ 
+           
       checkOrderTimeOut();
       
       if(OrdersTotal()!=0)return;
       
+      patternBuilder.setIsNewBar(0);
       if(!isNewBar())return;
+      patternBuilder.setIsNewBar(1);
       
-      if(getBarBody()<10)return;
+      Pattern pattern=patternBuilder.getPattern();
+      if(shared.getBarBody(1)<pattern.bodyWorkLimit)return;
       
       if(wasLastClosedOrderInThisBar())return;
       
-      evaluateNewOrder(); 
+      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
  }
  
  void checkOrderTimeOut(){
@@ -89,12 +92,7 @@ class Trend_robot {
  
  }
   
- double getBarBody(){
-   double barBody=MathAbs(iOpen(NULL,0,1)-iClose(NULL,0,1))*KOEF;
-   printf("body:"+barBody);
-   return barBody;
- }
- 
+
     int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
       printf("magic:"+num);
@@ -102,7 +100,7 @@ class Trend_robot {
    
    }
 
- void evaluateNewOrder(){
+ void evaluateNewOrder(double pattern_sl,double pattern_tp,double bodyWorkLimit){
  
    double extream;
    double sl=-1;
@@ -118,31 +116,27 @@ class Trend_robot {
       printf("Bid:"+Bid);
       printf("Ask:"+Ask);
       
-      if((MathAbs(Bid-extream)/2)*KOEF<10)return;
+      if((MathAbs(Bid-extream)/2)*KOEF<bodyWorkLimit)return;
       orderType=OP_BUY;
       colorOrder=Blue;
       
-      sl=Ask-(Ask-extream)/2;
-      tp=Bid+(Bid-extream);
+      sl=Ask-(Ask-extream)*pattern_sl;
+      tp=Bid+(Bid-extream)*pattern_tp;
      
    }else{
    // sell
       extream=iHigh(NULL,0,1);
-      printf("extream:"+extream);
-      printf("Bid:"+Bid);
-      printf("Ask:"+Ask);
 
-      if((MathAbs(Bid-extream)/2)*KOEF<10)return;
+      if((MathAbs(Bid-extream)/2)*KOEF<bodyWorkLimit)return;
       orderType=OP_SELL;
       colorOrder=Red;
-      sl=Bid+(extream-Bid)/2;
-      tp=Ask-(extream-Ask);
+      sl=Bid+(extream-Bid)*pattern_sl;
+      tp=Ask-(extream-Ask)*pattern_tp;
       
    }
    double volume=getLot(sl,orderType);
    currentOrderTicket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
    alertResult(currentOrderTicket,tp,sl,volume);
-   printf("evaluateNewOrder");   
  }
  
  
@@ -186,7 +180,6 @@ class Trend_robot {
       }
   }
  
-
  
  void closeOrder(){
   int ticket;
@@ -203,18 +196,10 @@ class Trend_robot {
       Print("Order closed successfully"); 
    } 
  }
- 
-       
- 
-  int getKoef(){
-      int koefLocal=1; 
-      for (int i=1;i<Digits;i=i+1){
-         koefLocal=koefLocal*10;
-      }
-      return koefLocal;
-  }
-  
+   
 };
+
+
 
 Trend_robot worker; 
  void OnTick() { 

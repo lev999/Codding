@@ -11,19 +11,49 @@
 struct Pattern{
    double sl;
    double tp;
-   double lot; 
+   double bodyWorkLimit; 
 };
 
 class PatternBuilder{
-Pattern pattern;
-public:
+   Pattern pattern;
+   string   pattern_sl_name;
+   string   pattern_tp_name;
+   string   pattern_bodyWorkLimit_name;
+   string isNewBar_name;
+ public:
 
-   PatternBuilder(){}
+   PatternBuilder(){
+      pattern_sl_name="pattern_sl";
+      pattern_tp_name="pattern_tp";
+      pattern_bodyWorkLimit_name="pattern_bodyWorkLimit";
+      isNewBar_name="isNewBar";
+   
+   }
 
    Pattern getPattern(){
+      pattern.sl=GlobalVariableGet(pattern_sl_name);
+      pattern.tp=GlobalVariableGet(pattern_tp_name);
+      pattern.bodyWorkLimit=GlobalVariableGet(pattern_bodyWorkLimit_name);
+      return pattern;
+   }
    
+   void publishPattern(double pattern_tp,double pattern_sl, double pattern_bodyWorkLimit){
    
-   return pattern;
+      GlobalVariableSet(pattern_sl_name,pattern_sl);
+      GlobalVariableSet(pattern_tp_name,pattern_tp);
+      GlobalVariableSet(pattern_bodyWorkLimit_name,pattern_bodyWorkLimit);
+      printf("PUBLISHED NEW PATTERN:" +"sl="+pattern_sl+",tp="+pattern_tp+",bodyWorkLimi="+pattern_bodyWorkLimit);
+   }
+   bool isNewBar(){
+   
+         if( GlobalVariableGet(isNewBar_name)==0.0){
+            return false;
+         }else{
+            return true;
+         }
+   }
+   void setIsNewBar(double value){
+         GlobalVariableSet(isNewBar_name,value);
    }
 
 
