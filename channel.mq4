@@ -8,13 +8,13 @@ const int         delayCounterLimit=1;
 const string      channelName="Channel";
 const int         timeFrame=PERIOD_H4;
 
-
 void OnChartEvent(const int id,  const long& lparam, const double& dparam,   const string& sparam ){
  
    if(sparam==channelName){
       worker.updateChannelParams();
    }
 }
+
 
 
 

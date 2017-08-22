@@ -12,6 +12,7 @@ struct Pattern{
    double sl;
    double tp;
    double bodyWorkLimit; 
+   double orderTimeOut; 
 };
 
 class PatternBuilder{
@@ -19,7 +20,8 @@ class PatternBuilder{
    string   pattern_sl_name;
    string   pattern_tp_name;
    string   pattern_bodyWorkLimit_name;
-   string isNewBar_name;
+   string   pattern_orderTimeOut_name;
+   string   isNewBar_name;
  public:
 
    PatternBuilder(){
@@ -27,23 +29,27 @@ class PatternBuilder{
       pattern_tp_name="pattern_tp";
       pattern_bodyWorkLimit_name="pattern_bodyWorkLimit";
       isNewBar_name="isNewBar";
-   
+      pattern_orderTimeOut_name="pattern_orderTimeOut";   
    }
 
    Pattern getPattern(){
       pattern.sl=GlobalVariableGet(pattern_sl_name);
       pattern.tp=GlobalVariableGet(pattern_tp_name);
       pattern.bodyWorkLimit=GlobalVariableGet(pattern_bodyWorkLimit_name);
+      pattern.orderTimeOut=GlobalVariableGet(pattern_orderTimeOut_name);
       return pattern;
    }
    
-   void publishPattern(double pattern_tp,double pattern_sl, double pattern_bodyWorkLimit){
+   void publishPattern(double pattern_tp,double pattern_sl, double pattern_bodyWorkLimit,double orderTimeOut){
    
       GlobalVariableSet(pattern_sl_name,pattern_sl);
       GlobalVariableSet(pattern_tp_name,pattern_tp);
       GlobalVariableSet(pattern_bodyWorkLimit_name,pattern_bodyWorkLimit);
-      printf("PUBLISHED NEW PATTERN:" +"sl="+pattern_sl+",tp="+pattern_tp+",bodyWorkLimi="+pattern_bodyWorkLimit);
+      GlobalVariableSet(pattern_orderTimeOut_name,orderTimeOut);
+      //printf("PUBLISHED NEW PATTERN:" +"sl="+pattern_sl+",tp="+pattern_tp+",bodyWorkLimi="+pattern_bodyWorkLimit+",orderTimeOut="+orderTimeOut);
    }
+
+
    bool isNewBar(){
    
          if( GlobalVariableGet(isNewBar_name)==0.0){

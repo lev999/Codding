@@ -1,5 +1,6 @@
 #include <PatternBuilder.mqh>
 #include <Shared.mqh>
+#include <CreateLabel.mqh>
 
 input double  MaxLossDollar=50;
 const int   timeFrame=PERIOD_H4;
@@ -14,6 +15,7 @@ class Trend_robot {
    int currentOrderTicket;
    PatternBuilder *patternBuilder; 
    Shared *shared; 
+   LabelManager *labelManager;
    
  Trend_robot() {  
       currentBar=0;
@@ -22,21 +24,26 @@ class Trend_robot {
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
       currentOrderTicket=-1;
-      patternBuilder.publishPattern(1.0,1.0,10);        
+      patternBuilder.publishPattern(1.0,1.0,10,3); 
+      labelManager = new LabelManager();
+             
  } 
    
  void onTick(){
  
-           
-      checkOrderTimeOut();
-      
-      if(OrdersTotal()!=0)return;
+      Pattern pattern=patternBuilder.getPattern();           
+      checkOrderTimeOut(pattern.orderTimeOut);
+      labelManager.parseAndPublishLabelValues();
+
       
       patternBuilder.setIsNewBar(0);
       if(!isNewBar())return;
       patternBuilder.setIsNewBar(1);
       
-      Pattern pattern=patternBuilder.getPattern();
+      if(OrdersTotal()!=0)return;
+      
+      
+
       if(shared.getBarBody(1)<pattern.bodyWorkLimit)return;
       
       if(wasLastClosedOrderInThisBar())return;
@@ -44,16 +51,16 @@ class Trend_robot {
       evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
  }
  
- void checkOrderTimeOut(){
+ void checkOrderTimeOut(double orderTimeOut){
    if(OrdersTotal()!=0){
       if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
        
           int openedOrderHour=TimeHour(OrderOpenTime());
           int currentHour=TimeHour(TimeCurrent());
-          int openedOrderDay=TimeDay(OrderOpenTime());
-          int currentDay=TimeDay(TimeCurrent());
 
-          if(openedOrderDay!=currentDay|| (currentHour>=openedOrderHour+8)){          
+          if(currentHour<openedOrderHour){openedOrderHour=openedOrderHour-24;}
+          
+          if((currentHour-openedOrderHour)>orderTimeOut*4){          
             printf("Order closing by timeOut");
             closeOrder();
           }else{
