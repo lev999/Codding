@@ -18,7 +18,6 @@ class Shared{
 
    double getBarBody(int i){
       double barBody=MathAbs(iOpen(NULL,0,i)-iClose(NULL,0,i))*getKoef();
-      printf("body:"+barBody);
       return barBody;
    }
    

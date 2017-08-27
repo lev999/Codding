@@ -24,7 +24,7 @@ class Trend_robot {
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
       currentOrderTicket=-1;
-      patternBuilder.publishPattern(1.0,1.0,10,3); 
+      patternBuilder.publishPattern(1.0,1.0,10,3,0); 
       labelManager = new LabelManager();
              
  } 
@@ -34,15 +34,18 @@ class Trend_robot {
       Pattern pattern=patternBuilder.getPattern();           
       checkOrderTimeOut(pattern.orderTimeOut);
       labelManager.parseAndPublishLabelValues();
-
-      
+            
       patternBuilder.setIsNewBar(0);
       if(!isNewBar())return;
       patternBuilder.setIsNewBar(1);
+
+      if(pattern.blockTrading==1){
+         closeAllOrders();
+         currentBar=currentBar-1;//to start trading immidiatly
+         return;
+         };
       
       if(OrdersTotal()!=0)return;
-      
-      
 
       if(shared.getBarBody(1)<pattern.bodyWorkLimit)return;
       
@@ -187,7 +190,17 @@ class Trend_robot {
       }
   }
  
- 
+ void closeAllOrders(){
+      bool runFlag=true;
+      while(runFlag){
+        if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
+            closeOrder();
+         }else{
+            runFlag=false;
+         }         
+      }            
+  }
+  
  void closeOrder(){
   int ticket;
    if(OrderType()==OP_BUY){

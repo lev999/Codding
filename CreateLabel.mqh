@@ -13,20 +13,24 @@
 #include <PatternBuilder.mqh>
 
 class LabelManager{
-string LABEL_SL_TP;
+string LABEL_TP_SL;
 string LABEL_TIME_OUT;
 string LABEL_WORK_LIMIT;
+string LABEL_STOP_TRADING;
 PatternBuilder *patternBuilder;
 public:
    LabelManager(){
-      LABEL_SL_TP="LABEL_SL_TP";
+      LABEL_TP_SL="LABEL_TP_SL";
       LABEL_TIME_OUT="LABEL_TIME_OUT";
       LABEL_WORK_LIMIT="LABEL_WORK_LIMIT";
+      LABEL_STOP_TRADING="LABEL_STOP_TRADING";
+      
       patternBuilder=new PatternBuilder();
  
-      createLabel(LABEL_SL_TP,32,"0.5_0.6");
+      createLabel(LABEL_TP_SL,32,"0.5_0.6");
       createLabel(LABEL_TIME_OUT,52,"3");
       createLabel(LABEL_WORK_LIMIT,72,"10");
+      createLabel(LABEL_STOP_TRADING,92,"0");
    }
   
 void parseAndPublishLabelValues(){
@@ -34,10 +38,11 @@ void parseAndPublishLabelValues(){
    SL_TP sl_tp=parseSL_TP();
    double timeOut= parse_OneValue(LABEL_TIME_OUT);
    double workLimit= parse_OneValue(LABEL_WORK_LIMIT);
-   patternBuilder.publishPattern(sl_tp.TP,sl_tp.SL,workLimit,timeOut);
-
+   double stopTrading= parse_OneValue(LABEL_STOP_TRADING);
+   patternBuilder.publishPattern(sl_tp.TP,sl_tp.SL,workLimit,timeOut,stopTrading);
       
   }
+  
 private:
 
   double  parse_OneValue(string labelName){
@@ -52,7 +57,7 @@ private:
    };
    
   SL_TP parseSL_TP(){
-      string to_split=ObjectGetString(0,LABEL_SL_TP,OBJPROP_TEXT,0);
+      string to_split=ObjectGetString(0,LABEL_TP_SL,OBJPROP_TEXT,0);
       string sep="_";                // A separator as a character 
       ushort u_sep;                  // The code of the separator character 
       string result[];               // An array to get strings
@@ -60,8 +65,8 @@ private:
       u_sep=StringGetCharacter(sep,0); 
       StringSplit(to_split,u_sep,result);
       SL_TP sl_tp;
-      sl_tp.SL=StringToDouble( result[0]);
-      sl_tp.TP=StringToDouble( result[1]);
+      sl_tp.TP=StringToDouble( result[0]);
+      sl_tp.SL=StringToDouble( result[1]);
       return sl_tp;
 
   }
