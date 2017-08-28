@@ -10,10 +10,11 @@
 
 class Shared{
  
+  string   isNewBar_name;
  public:
 
-   Shared(){
-   
+   Shared(){   
+      isNewBar_name="isNewBar";
    }
 
    double getBarBody(int i){
@@ -28,6 +29,21 @@ class Shared{
       }
       return koefLocal;
   }
+
+   bool isNewBar(){
+   
+         if( GlobalVariableGet(isNewBar_name)==0){
+            return false;
+         }else{
+            return true;
+         }
+   }
+   void setIsNewBarTrue(){
+         GlobalVariableSet(isNewBar_name,1);
+   }
+  void setIsNewBarFalse(){
+         GlobalVariableSet(isNewBar_name,0);
+   }
 
 
 };

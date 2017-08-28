@@ -35,9 +35,9 @@ class Trend_robot {
       checkOrderTimeOut(pattern.orderTimeOut);
       labelManager.parseAndPublishLabelValues();
             
-      patternBuilder.setIsNewBar(0);
+      shared.setIsNewBarFalse();
       if(!isNewBar())return;
-      patternBuilder.setIsNewBar(1);
+      shared.setIsNewBarTrue();
 
       if(pattern.blockTrading==1){
          closeAllOrders();

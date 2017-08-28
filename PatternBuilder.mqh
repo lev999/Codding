@@ -23,14 +23,12 @@ class PatternBuilder{
    string   pattern_bodyWorkLimit_name;
    string   pattern_orderTimeOut_name;
    string   pattern_blockTrading_name;
-   string   isNewBar_name;
- public:
+  public:
 
    PatternBuilder(){
       pattern_sl_name="pattern_sl";
       pattern_tp_name="pattern_tp";
       pattern_bodyWorkLimit_name="pattern_bodyWorkLimit";
-      isNewBar_name="isNewBar";
       pattern_orderTimeOut_name="pattern_orderTimeOut"; 
       pattern_blockTrading_name = "pattern_blockTrading_name" ; 
    }
@@ -56,17 +54,6 @@ class PatternBuilder{
    }
 
 
-   bool isNewBar(){
-   
-         if( GlobalVariableGet(isNewBar_name)==0){
-            return false;
-         }else{
-            return true;
-         }
-   }
-   void setIsNewBar(double value){
-         GlobalVariableSet(isNewBar_name,value);
-   }
 
 
 };
