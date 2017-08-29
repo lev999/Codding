@@ -23,10 +23,8 @@ class Trend_robot {
       shared = new Shared(); 
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
-      currentOrderTicket=-1;
-      patternBuilder.publishPattern(1.0,1.0,10,3,0); 
-      labelManager = new LabelManager();
-             
+      currentOrderTicket=-1; 
+      labelManager = new LabelManager();             
  } 
    
  void onTick(){

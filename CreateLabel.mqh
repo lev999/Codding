@@ -27,7 +27,7 @@ public:
       
       patternBuilder=new PatternBuilder();
  
-      createLabel(LABEL_TP_SL,32,"0.5_0.6");
+      createLabel(LABEL_TP_SL,32,"1.0_-0.6");
       createLabel(LABEL_TIME_OUT,52,"3");
       createLabel(LABEL_WORK_LIMIT,72,"10");
       createLabel(LABEL_STOP_TRADING,92,"0");
@@ -66,7 +66,7 @@ private:
       StringSplit(to_split,u_sep,result);
       SL_TP sl_tp;
       sl_tp.TP=StringToDouble( result[0]);
-      sl_tp.SL=StringToDouble( result[1]);
+      sl_tp.SL=MathAbs(StringToDouble( result[1]));
       return sl_tp;
 
   }
