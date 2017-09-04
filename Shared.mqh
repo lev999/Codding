@@ -8,6 +8,14 @@
 #property version   "1.00"
 #property strict
 
+struct Pattern{
+   double sl;
+   double tp;
+   double bodyWorkLimit; 
+   double orderTimeOut; 
+   double blockTrading; 
+};
+
 class Shared{
  
   string   isNewBar_name;

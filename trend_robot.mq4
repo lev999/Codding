@@ -1,6 +1,7 @@
-#include <PatternBuilder.mqh>
+#include <GlobalVarManager.mqh>
 #include <Shared.mqh>
 #include <CreateLabel.mqh>
+#include <PatternChooser.mqh>
 
 input double  MaxLossDollar=50;
 const int   timeFrame=PERIOD_H4;
@@ -13,29 +14,32 @@ class Trend_robot {
    int lastOrderMagicNumber;
    int currentBar;
    int currentOrderTicket;
-   PatternBuilder *patternBuilder; 
+   GlobalVarManager *globalVarManager; 
    Shared *shared; 
+   PatternChooser *patternChooser; 
    LabelManager *labelManager;
    
- Trend_robot() {  
+ Trend_robot() {
       currentBar=0;
-      patternBuilder = new PatternBuilder(); 
+      globalVarManager = new GlobalVarManager(); 
       shared = new Shared(); 
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
       currentOrderTicket=-1; 
-      labelManager = new LabelManager();             
+      labelManager = new LabelManager();  
+      patternChooser = new PatternChooser();
  } 
    
  void onTick(){
  
-      Pattern pattern=patternBuilder.getPattern();           
+      Pattern pattern=globalVarManager.getPattern();           
       checkOrderTimeOut(pattern.orderTimeOut);
       labelManager.parseAndPublishLabelValues();
             
       shared.setIsNewBarFalse();
-      if(!isNewBar())return;
+      if(!isNewBar())return;   
       shared.setIsNewBarTrue();
+      patternChooser.choosePatternAndPublish();
 
       if(pattern.blockTrading==1){
          closeAllOrders();

@@ -7,16 +7,11 @@
 #property link      "https://www.mql5.com"
 #property version   "1.00"
 #property strict
+#include <Shared.mqh>; 
 
-struct Pattern{
-   double sl;
-   double tp;
-   double bodyWorkLimit; 
-   double orderTimeOut; 
-   double blockTrading; 
-};
 
-class PatternBuilder{
+
+class GlobalVarManager{
    Pattern pattern;
    string   pattern_sl_name;
    string   pattern_tp_name;
@@ -25,7 +20,7 @@ class PatternBuilder{
    string   pattern_blockTrading_name;
   public:
 
-   PatternBuilder(){
+   GlobalVarManager(){
       pattern_sl_name="pattern_sl";
       pattern_tp_name="pattern_tp";
       pattern_bodyWorkLimit_name="pattern_bodyWorkLimit";
@@ -52,8 +47,5 @@ class PatternBuilder{
       
       //printf("PUBLISHED NEW PATTERN:" +"sl="+pattern_sl+",tp="+pattern_tp+",bodyWorkLimi="+pattern_bodyWorkLimit+",orderTimeOut="+orderTimeOut);
    }
-
-
-
 
 };

@@ -10,14 +10,14 @@
 //+------------------------------------------------------------------+
 //| Expert initialization function                                   |
 //+------------------------------------------------------------------+
-#include <PatternBuilder.mqh>
+#include <GlobalVarManager.mqh>
 
 class LabelManager{
 string LABEL_TP_SL;
 string LABEL_TIME_OUT;
 string LABEL_WORK_LIMIT;
 string LABEL_STOP_TRADING;
-PatternBuilder *patternBuilder;
+GlobalVarManager *globalVarManager;
 public:
    LabelManager(){
       LABEL_TP_SL="LABEL_TP_SL";
@@ -25,7 +25,7 @@ public:
       LABEL_WORK_LIMIT="LABEL_WORK_LIMIT";
       LABEL_STOP_TRADING="LABEL_STOP_TRADING";
       
-      patternBuilder=new PatternBuilder();
+      globalVarManager=new GlobalVarManager();
  
       createLabel(LABEL_TP_SL,32,"1.0_-0.6");
       createLabel(LABEL_TIME_OUT,52,"3");
@@ -39,7 +39,7 @@ void parseAndPublishLabelValues(){
    double timeOut= parse_OneValue(LABEL_TIME_OUT);
    double workLimit= parse_OneValue(LABEL_WORK_LIMIT);
    double stopTrading= parse_OneValue(LABEL_STOP_TRADING);
-   patternBuilder.publishPattern(sl_tp.TP,sl_tp.SL,workLimit,timeOut,stopTrading);
+   globalVarManager.publishPattern(sl_tp.TP,sl_tp.SL,workLimit,timeOut,stopTrading);
       
   }
   
