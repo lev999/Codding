@@ -43,6 +43,11 @@ void parseAndPublishLabelValues(){
       
   }
   
+  void updateLabelValues(double tp, double sl){
+   string text=tp+"_"+sl;  
+   ObjectSetString(0,LABEL_TP_SL,OBJPROP_TEXT,text);
+  }
+  
 private:
 
   double  parse_OneValue(string labelName){

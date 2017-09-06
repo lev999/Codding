@@ -1,6 +1,6 @@
 #include <GlobalVarManager.mqh>
 #include <Shared.mqh>
-#include <CreateLabel.mqh>
+#include <LabelManager.mqh>
 #include <PatternChooser.mqh>
 
 input double  MaxLossDollar=50;
@@ -53,7 +53,7 @@ class Trend_robot {
       
       if(wasLastClosedOrderInThisBar())return;
       
-      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
+      //evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
  }
  
  void checkOrderTimeOut(double orderTimeOut){
