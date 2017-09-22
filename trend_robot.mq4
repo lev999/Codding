@@ -4,7 +4,9 @@
 #include <PatternChooser.mqh>
 
 input double  MaxLossDollar=50;
-const int   timeFrame=PERIOD_H4;
+input double TP_SL_Limit=5.0;
+const int   timeFrame=PERIOD_H1;
+
   
 class Trend_robot { 
   
@@ -23,6 +25,7 @@ class Trend_robot {
       currentBar=0;
       globalVarManager = new GlobalVarManager(); 
       shared = new Shared(); 
+      shared.set_TP_SL_Limit(TP_SL_Limit);
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
       currentOrderTicket=-1; 
@@ -32,8 +35,10 @@ class Trend_robot {
    
  void onTick(){
  
-      Pattern pattern=globalVarManager.getPattern();           
+      Pattern pattern=globalVarManager.getPattern();
+                 
       checkOrderTimeOut(pattern.orderTimeOut);
+      
       labelManager.parseAndPublishLabelValues();
             
       shared.setIsNewBarFalse();
@@ -53,7 +58,7 @@ class Trend_robot {
       
       if(wasLastClosedOrderInThisBar())return;
       
-      //evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
+      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
  }
  
  void checkOrderTimeOut(double orderTimeOut){
@@ -65,7 +70,9 @@ class Trend_robot {
 
           if(currentHour<openedOrderHour){openedOrderHour=openedOrderHour-24;}
           
-          if((currentHour-openedOrderHour)>orderTimeOut*4){          
+          int koef=takeKoefVsTimeFrame();
+          
+          if((currentHour-openedOrderHour)+1>orderTimeOut*koef){          
             printf("Order closing by timeOut");
             closeOrder();
           }else{
@@ -74,6 +81,17 @@ class Trend_robot {
       }   
    }   
  }
+  int takeKoefVsTimeFrame(){
+     if (timeFrame==PERIOD_H4){
+      return 4;
+     }
+     if (timeFrame==PERIOD_H1){
+      return 1;
+     }
+     printf("ERROR, you cannot use period less than 1 hour");
+     return -1;     
+  }
+  
   
  bool wasLastClosedOrderInThisBar(){
    int i=OrdersHistoryTotal()-1;
@@ -114,7 +132,7 @@ class Trend_robot {
 
  void evaluateNewOrder(double pattern_sl,double pattern_tp,double bodyWorkLimit){
  
-   double extream;
+   double extream,sl_pips,tp_pips;
    double sl=-1;
    double tp=-1;
    int orderType;
@@ -124,29 +142,28 @@ class Trend_robot {
    if((iOpen(NULL,0,1)<iClose(NULL,0,1))){
       // buy     
       extream=iLow(NULL,0,1);
-      printf("extream:"+extream);
-      printf("Bid:"+Bid);
-      printf("Ask:"+Ask);
       
-      if((MathAbs(Bid-extream)/2)*KOEF<bodyWorkLimit)return;
       orderType=OP_BUY;
       colorOrder=Blue;
-      
-      sl=Ask-(Ask-extream)*pattern_sl;
-      tp=Bid+(Bid-extream)*pattern_tp;
+      sl_pips=(Ask-extream)*pattern_sl;
+      sl=Ask-sl_pips;
+      tp_pips=(Bid-extream)*pattern_tp;
+      tp=Bid+tp_pips;
      
    }else{
    // sell
       extream=iHigh(NULL,0,1);
 
-      if((MathAbs(Bid-extream)/2)*KOEF<bodyWorkLimit)return;
       orderType=OP_SELL;
       colorOrder=Red;
-      sl=Bid+(extream-Bid)*pattern_sl;
-      tp=Ask-(extream-Ask)*pattern_tp;
-      
-   }
+      sl_pips=(extream-Bid)*pattern_sl;
+      sl=Bid+sl_pips;
+      tp_pips=(extream-Ask)*pattern_tp;
+      tp=Ask-tp_pips;
+    }
    double volume=getLot(sl,orderType);
+   if(!shared.isOrderValid(tp_pips*KOEF,sl_pips*KOEF))return;      
+
    currentOrderTicket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
    alertResult(currentOrderTicket,tp,sl,volume);
  }
