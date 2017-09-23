@@ -16,6 +16,7 @@ struct Pattern{
    double bodyWorkLimit; 
    double orderTimeOut; 
    double blockTrading; 
+   double spread; 
 };
 
 class Shared{

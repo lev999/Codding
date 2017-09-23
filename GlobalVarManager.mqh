@@ -20,6 +20,7 @@ class GlobalVarManager{
    string   pattern_blockTrading_name;
    string   pattern_historyDepth_name;
    string   pattern_SlTpLimit_name;
+   string   pattern_SPREAD_name;
 
   public:
 
@@ -30,7 +31,8 @@ class GlobalVarManager{
       pattern_orderTimeOut_name="pattern_orderTimeOut"; 
       pattern_blockTrading_name = "pattern_blockTrading" ; 
       pattern_historyDepth_name = "pattern_historyDepth" ; 
-      pattern_SlTpLimit_name = "pattern_SlTpLimit" ; 
+      pattern_SlTpLimit_name = "pattern_SlTpLimit" ;
+      pattern_SPREAD_name="pattern_spread" ;
    }
 
    Pattern getPattern(){
@@ -41,6 +43,7 @@ class GlobalVarManager{
       pattern.blockTrading=GlobalVariableGet(pattern_blockTrading_name);
       pattern.history_depth=GlobalVariableGet(pattern_historyDepth_name);
       pattern.sl_tp_limit=GlobalVariableGet(pattern_SlTpLimit_name);
+      pattern.spread=GlobalVariableGet(pattern_SPREAD_name);
       return pattern;
    }
    
@@ -56,7 +59,7 @@ class GlobalVarManager{
       GlobalVariableSet(pattern_blockTrading_name,1);
    }
    
-   void publishPattern(double pattern_tp,double pattern_sl, double pattern_bodyWorkLimit,double orderTimeOut, double blockTrading,double historyDepth, double sl_tp_limit){
+   void publishPattern(double pattern_tp,double pattern_sl, double pattern_bodyWorkLimit,double orderTimeOut, double blockTrading,double historyDepth, double sl_tp_limit, double spread){
    
       GlobalVariableSet(pattern_sl_name,pattern_sl);
       GlobalVariableSet(pattern_tp_name,pattern_tp);
@@ -65,6 +68,7 @@ class GlobalVarManager{
       GlobalVariableSet(pattern_blockTrading_name,blockTrading);
       GlobalVariableSet(pattern_historyDepth_name,historyDepth);
       GlobalVariableSet(pattern_SlTpLimit_name,sl_tp_limit);
+      GlobalVariableSet(pattern_SPREAD_name,spread);
       
       //printf("PUBLISHED NEW PATTERN:" +"sl="+pattern_sl+",tp="+pattern_tp+",bodyWorkLimi="+pattern_bodyWorkLimit+",orderTimeOut="+orderTimeOut);
    }

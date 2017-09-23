@@ -4,12 +4,17 @@
 
 input double  MaxLossDollar=50;
 input double  TP_SL_Limit=5.0;
+input int     BODY_WORK_LIMIT=5.0;
+input int     ORDER_TIME_OUT=10;
 input int     HISTORY_DEPTH=10;
-input int     BODY_WORK_LIMIT=10;
-input int     ORDER_TIME_OUT=3;
 const int     timeFrame=PERIOD_H1;
 const double  initSL=1;
 const double  initTP=-0.5;
+const double  SPREAD=2;
+//+------------------------------------------------------------------+
+//|                  SET SPREAD FOR TESTING to 0                                                |
+//+------------------------------------------------------------------+
+
 
   
 class Trend_robot { 
@@ -27,7 +32,7 @@ class Trend_robot {
  Trend_robot() {
       currentBar=0;
       globalVarManager = new GlobalVarManager(); 
-      globalVarManager.publishPattern(initTP,MathAbs(initSL),BODY_WORK_LIMIT,ORDER_TIME_OUT,0,HISTORY_DEPTH,TP_SL_Limit);
+      globalVarManager.publishPattern(initTP,MathAbs(initSL),BODY_WORK_LIMIT,ORDER_TIME_OUT,0,HISTORY_DEPTH,TP_SL_Limit,SPREAD);
       shared = new Shared(); 
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
@@ -47,7 +52,7 @@ class Trend_robot {
       patternChooser.choosePatternAndPublish();
 
       if(pattern.blockTrading==1){
-         closeAllOrders();
+        // closeAllOrders();
          //currentBar=currentBar-1;//to start trading immidiatly
          return;
          };
@@ -145,9 +150,9 @@ class Trend_robot {
       
       orderType=OP_BUY;
       colorOrder=Blue;
-      sl_pips=(Ask-extream)*pattern_sl;
+      sl_pips=(Ask-extream)*pattern_sl-SPREAD/KOEF;
       sl=Ask-sl_pips;
-      tp_pips=(Bid-extream)*pattern_tp;
+      tp_pips=(Bid-extream)*pattern_tp+SPREAD/KOEF;
       tp=Bid+tp_pips;
      
    }else{
@@ -156,9 +161,9 @@ class Trend_robot {
 
       orderType=OP_SELL;
       colorOrder=Red;
-      sl_pips=(extream-Bid)*pattern_sl;
+      sl_pips=(extream-Bid)*pattern_sl+SPREAD/KOEF;
       sl=Bid+sl_pips;
-      tp_pips=(extream-Ask)*pattern_tp;
+      tp_pips=(extream-Ask)*pattern_tp-SPREAD/KOEF;
       tp=Ask-tp_pips;
     }
    double volume=getLot(sl,orderType);

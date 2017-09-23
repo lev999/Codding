@@ -35,7 +35,7 @@ class PatternChooser{
       
       for(double profit=0.3;profit<=1.5;profit=profit+0.1){
        for(double loss=-0.3;loss>=-1.5;loss=loss-0.1){ 
-          if(profit>MathAbs(loss))  {// here TP should be always higher  the SL, other wise indicator check SL_TP_LIMIT is incorrect
+          if(profit>MathAbs(loss))  {
              double result=NormalizeDouble(getEquity(profit,loss), 2);           
              if(result>max){
                max=NormalizeDouble(result, 2);
@@ -63,7 +63,7 @@ class PatternChooser{
    
 
    double getEquity(double tp,double sl){       
-       double result=iCustom(NULL,0,"trendIndicator",tp,sl,pattern.history_depth,false,pattern.sl_tp_limit,6,1)*100;
+       double result=iCustom(NULL,0,"trendIndicator",tp,sl,pattern.history_depth,false,pattern.sl_tp_limit,pattern.spread,6,1)*100;
        if(result!=2147483647){
          return  result;        
        }else{
