@@ -8,23 +8,23 @@
 #property version   "1.00"
 #property strict
 #include <GlobalVarManager.mqh>
-#include <Shared.mqh>
 #include <LabelManager.mqh>
+#include <Shared.mqh>
 
-  input int HISTORY_DEPTH=10;
+  
   
 class PatternChooser{
    Pattern pattern;
    GlobalVarManager *globalVarManager;
-   LabelManager *labelManager;
    Shared *shared; 
-
+   LabelManager *labelManager; 
   public:
 
    PatternChooser(){
+      shared = new Shared();
       globalVarManager =new GlobalVarManager ();
-      labelManager = new LabelManager();
-      shared = new Shared();   
+      pattern=globalVarManager.getPattern(); 
+      labelManager= new LabelManager();
    }
 
 
@@ -50,19 +50,22 @@ class PatternChooser{
       if(max>0&&tp_max!=0&&sl_max!=0){
          string msg="Optimal: "+"equity="+max+", tp_max="+tp_max+", sl_max="+sl_max;
          printf(msg); 
-         Comment(msg);      
-         labelManager.updateLabelValues(tp_max,sl_max);      
+         //Comment(msg);
+         globalVarManager.updateSlTp(-sl_max,tp_max);
+         globalVarManager.unBlockTrading(); 
+         labelManager.updateLabels(max);
       }else{
-         printf("Pattern was not chosen because trendIndicator returned 0");
+         globalVarManager.blockTrading();
+         labelManager.updateLabels(max);  
+      //   printf("trading blocked");
       }
    }
    
 
    double getEquity(double tp,double sl){       
-       double result=iCustom(NULL,0,"trendIndicator",tp,sl,HISTORY_DEPTH,false,shared.get_TP_SL_Limit(),6,1)*100;
+       double result=iCustom(NULL,0,"trendIndicator",tp,sl,pattern.history_depth,false,pattern.sl_tp_limit,6,1)*100;
        if(result!=2147483647){
-         return  result;
-        
+         return  result;        
        }else{
          return -100;
        }

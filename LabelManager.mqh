@@ -28,28 +28,37 @@ public:
       globalVarManager=new GlobalVarManager();
  
       createLabel(LABEL_TP_SL,32,"1.0_-0.6");
-      createLabel(LABEL_TIME_OUT,52,"3");
-      createLabel(LABEL_WORK_LIMIT,72,"10");
+     // createLabel(LABEL_TIME_OUT,52,"3");
+      //createLabel(LABEL_WORK_LIMIT,72,"10");
       createLabel(LABEL_STOP_TRADING,92,"0");
    }
+   
+   
+void updateLabels(double equity){
+     Pattern pattern= globalVarManager.getPattern();
+     updateLabelValues(equity,pattern.tp,pattern.sl);
+     
+     ObjectSetString(0,LABEL_STOP_TRADING,OBJPROP_TEXT,pattern.blockTrading);
+   }
   
-void parseAndPublishLabelValues(){
+void parseValues(){
 
    SL_TP sl_tp=parseSL_TP();
    double timeOut= parse_OneValue(LABEL_TIME_OUT);
    double workLimit= parse_OneValue(LABEL_WORK_LIMIT);
    double stopTrading= parse_OneValue(LABEL_STOP_TRADING);
-   globalVarManager.publishPattern(sl_tp.TP,sl_tp.SL,workLimit,timeOut,stopTrading);
-      
+       
   }
   
-  void updateLabelValues(double tp, double sl){
-   string text=tp+"_"+sl;  
-   ObjectSetString(0,LABEL_TP_SL,OBJPROP_TEXT,text);
-  }
+
   
 private:
 
+  void updateLabelValues(double equity,double tp, double sl){
+   string text= equity+": "+tp+"_-"+sl;  
+   ObjectSetString(0,LABEL_TP_SL,OBJPROP_TEXT,text);
+  }
+  
   double  parse_OneValue(string labelName){
       string str_value=ObjectGetString(0,labelName,OBJPROP_TEXT,0);
       return StringToDouble(str_value);

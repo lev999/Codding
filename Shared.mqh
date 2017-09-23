@@ -11,6 +11,8 @@
 struct Pattern{
    double sl;
    double tp;
+   int history_depth;
+   double sl_tp_limit;
    double bodyWorkLimit; 
    double orderTimeOut; 
    double blockTrading; 
@@ -19,23 +21,19 @@ struct Pattern{
 class Shared{
  
   string   isNewBar_name;
-  double TP_SL_Limit;
+  double tp_sl_limit_local;
+  
  public:
-
-   double get_TP_SL_Limit(){
-      return TP_SL_Limit;
-   }
-   void set_TP_SL_Limit(double limit){
-      TP_SL_Limit=limit;
-   }
    
-   Shared(){   
+   Shared(){ 
+        
       isNewBar_name="isNewBar";
+      
    }
    
-   bool isOrderValid(double tp,double sl){
-      if(MathAbs(tp)<=TP_SL_Limit||MathAbs(sl)<=TP_SL_Limit){
-         printf("Order SL or TP is less then limit ("+TP_SL_Limit+" pips) ==> order canceled");
+   bool isOrderValid(double tp,double sl,double limit){
+      if(MathAbs(tp)<=limit||MathAbs(sl)<=limit){
+         //printf("Order SL or TP is less then limit ("+TP_SL_Limit+" pips) ==> order canceled");
          return false;
       }
       else  return true;

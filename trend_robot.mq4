@@ -1,11 +1,15 @@
 #include <GlobalVarManager.mqh>
 #include <Shared.mqh>
-#include <LabelManager.mqh>
 #include <PatternChooser.mqh>
 
 input double  MaxLossDollar=50;
-input double TP_SL_Limit=5.0;
-const int   timeFrame=PERIOD_H1;
+input double  TP_SL_Limit=5.0;
+input int     HISTORY_DEPTH=10;
+input int     BODY_WORK_LIMIT=10;
+input int     ORDER_TIME_OUT=3;
+const int     timeFrame=PERIOD_H1;
+const double  initSL=1;
+const double  initTP=-0.5;
 
   
 class Trend_robot { 
@@ -19,27 +23,23 @@ class Trend_robot {
    GlobalVarManager *globalVarManager; 
    Shared *shared; 
    PatternChooser *patternChooser; 
-   LabelManager *labelManager;
    
  Trend_robot() {
       currentBar=0;
       globalVarManager = new GlobalVarManager(); 
+      globalVarManager.publishPattern(initTP,MathAbs(initSL),BODY_WORK_LIMIT,ORDER_TIME_OUT,0,HISTORY_DEPTH,TP_SL_Limit);
       shared = new Shared(); 
-      shared.set_TP_SL_Limit(TP_SL_Limit);
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
       currentOrderTicket=-1; 
-      labelManager = new LabelManager();  
       patternChooser = new PatternChooser();
  } 
    
  void onTick(){
  
       Pattern pattern=globalVarManager.getPattern();
-                 
       checkOrderTimeOut(pattern.orderTimeOut);
       
-      labelManager.parseAndPublishLabelValues();
             
       shared.setIsNewBarFalse();
       if(!isNewBar())return;   
@@ -48,7 +48,7 @@ class Trend_robot {
 
       if(pattern.blockTrading==1){
          closeAllOrders();
-         currentBar=currentBar-1;//to start trading immidiatly
+         //currentBar=currentBar-1;//to start trading immidiatly
          return;
          };
       
@@ -58,7 +58,7 @@ class Trend_robot {
       
       if(wasLastClosedOrderInThisBar())return;
       
-      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit); 
+      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit,pattern.sl_tp_limit); 
  }
  
  void checkOrderTimeOut(double orderTimeOut){
@@ -130,7 +130,7 @@ class Trend_robot {
    
    }
 
- void evaluateNewOrder(double pattern_sl,double pattern_tp,double bodyWorkLimit){
+ void evaluateNewOrder(double pattern_sl,double pattern_tp,double bodyWorkLimit, double tp_sl_limit){
  
    double extream,sl_pips,tp_pips;
    double sl=-1;
@@ -162,7 +162,7 @@ class Trend_robot {
       tp=Ask-tp_pips;
     }
    double volume=getLot(sl,orderType);
-   if(!shared.isOrderValid(tp_pips*KOEF,sl_pips*KOEF))return;      
+   if(!shared.isOrderValid(tp_pips*KOEF,sl_pips*KOEF,tp_sl_limit))return;      
 
    currentOrderTicket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
    alertResult(currentOrderTicket,tp,sl,volume);
