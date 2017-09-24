@@ -4,7 +4,7 @@
 
 input double  MaxLossDollar=50;
 input double  TP_SL_Limit=5.0;
-input int     ORDER_TIME_OUT=40;
+input int     ORDER_TIME_OUT=40;//in hours
 input int     HISTORY_DEPTH=10;
 const int     timeFrame=PERIOD_H1;
 const double  initSL=1;
@@ -68,36 +68,20 @@ class Trend_robot {
  }
  
  void checkOrderTimeOut(double orderTimeOut){
+  
    if(OrdersTotal()!=0){
       if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
-       
-          int openedOrderHour=TimeHour(OrderOpenTime());
-          int currentHour=TimeHour(TimeCurrent());
-
-          if(currentHour<openedOrderHour){openedOrderHour=openedOrderHour-24;}
-          
-          int koef=takeKoefVsTimeFrame();
-          
-          if((currentHour-openedOrderHour)+1>orderTimeOut*koef){          
+         int orderTime = OrderOpenTime();
+         int currentTime=TimeCurrent();
+         double orderAgeHours=(currentTime-orderTime)/60/60;
+         if(orderAgeHours>=orderTimeOut){
             printf("Order closing by timeOut");
             closeOrder();
-          }else{
-            return ;
-          }        
+         }
+      
       }   
    }   
- }
-  int takeKoefVsTimeFrame(){
-     if (timeFrame==PERIOD_H4){
-      return 4;
-     }
-     if (timeFrame==PERIOD_H1){
-      return 1;
-     }
-     printf("ERROR, you cannot use period less than 1 hour");
-     return -1;     
-  }
-  
+ }  
   
  bool wasLastClosedOrderInThisBar(){
    int i=OrdersHistoryTotal()-1;
