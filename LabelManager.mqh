@@ -38,7 +38,7 @@ void updateLabels(double equity){
      Pattern pattern= globalVarManager.getPattern();
      updateLabelValues(equity,pattern.tp,pattern.sl);
      
-     ObjectSetString(0,LABEL_STOP_TRADING,OBJPROP_TEXT,pattern.blockTrading);
+     ObjectSetString(0,LABEL_STOP_TRADING,OBJPROP_TEXT,DoubleToStr(pattern.blockTrading,0));
    }
   
 void parseValues(){
@@ -55,7 +55,7 @@ void parseValues(){
 private:
 
   void updateLabelValues(double equity,double tp, double sl){
-   string text= equity+": "+tp+"_-"+sl;  
+   string text= DoubleToStr(equity,1)+": "+DoubleToStr(tp,1)+"_-"+DoubleToStr(sl,1);  
    ObjectSetString(0,LABEL_TP_SL,OBJPROP_TEXT,text);
   }
   

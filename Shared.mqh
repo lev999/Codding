@@ -11,9 +11,8 @@
 struct Pattern{
    double sl;
    double tp;
-   int history_depth;
+   double history_depth;
    double sl_tp_limit;
-   double bodyWorkLimit; 
    double orderTimeOut; 
    double blockTrading; 
    double spread; 
@@ -39,11 +38,6 @@ class Shared{
       }
       else  return true;
    }
-
-   double getBarBody(int i){
-      double barBody=MathAbs(iOpen(NULL,0,i)-iClose(NULL,0,i))*getKoef();
-      return barBody;
-   }
    
    int getKoef(){
       int koefLocal=1; 
@@ -67,6 +61,4 @@ class Shared{
   void setIsNewBarFalse(){
          GlobalVariableSet(isNewBar_name,0);
    }
-
-
 };

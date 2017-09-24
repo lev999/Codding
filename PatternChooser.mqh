@@ -48,7 +48,7 @@ class PatternChooser{
          }
       }  
       if(max>0&&tp_max!=0&&sl_max!=0){
-         string msg="Optimal: "+"equity="+max+", tp_max="+tp_max+", sl_max="+sl_max;
+         string msg="Optimal: "+"equity="+DoubleToStr(max)+", tp_max="+DoubleToStr(tp_max)+", sl_max="+DoubleToStr(sl_max);
          printf(msg); 
          //Comment(msg);
          globalVarManager.updateSlTp(-sl_max,tp_max);

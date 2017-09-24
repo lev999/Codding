@@ -4,8 +4,7 @@
 
 input double  MaxLossDollar=50;
 input double  TP_SL_Limit=5.0;
-input int     BODY_WORK_LIMIT=5.0;
-input int     ORDER_TIME_OUT=10;
+input int     ORDER_TIME_OUT=40;
 input int     HISTORY_DEPTH=10;
 const int     timeFrame=PERIOD_H1;
 const double  initSL=1;
@@ -32,7 +31,7 @@ class Trend_robot {
  Trend_robot() {
       currentBar=0;
       globalVarManager = new GlobalVarManager(); 
-      globalVarManager.publishPattern(initTP,MathAbs(initSL),BODY_WORK_LIMIT,ORDER_TIME_OUT,0,HISTORY_DEPTH,TP_SL_Limit,SPREAD);
+      globalVarManager.publishPattern(initTP,MathAbs(initSL),ORDER_TIME_OUT,0,HISTORY_DEPTH,TP_SL_Limit,SPREAD);
       shared = new Shared(); 
       KOEF=shared.getKoef();   
       lastOrderMagicNumber=-9999;  
@@ -42,15 +41,17 @@ class Trend_robot {
    
  void onTick(){
  
-      Pattern pattern=globalVarManager.getPattern();
-      checkOrderTimeOut(pattern.orderTimeOut);
+      
+      checkOrderTimeOut(globalVarManager.getOrderTimeOut());
       
             
       shared.setIsNewBarFalse();
       if(!isNewBar())return;   
       shared.setIsNewBarTrue();
+      
       patternChooser.choosePatternAndPublish();
-
+      Pattern pattern=globalVarManager.getPattern();
+            
       if(pattern.blockTrading==1){
         // closeAllOrders();
          //currentBar=currentBar-1;//to start trading immidiatly
@@ -59,11 +60,11 @@ class Trend_robot {
       
       if(OrdersTotal()!=0)return;
 
-      if(shared.getBarBody(1)<pattern.bodyWorkLimit)return;
+      //if(shared.getBarBody(1)<pattern.bodyWorkLimit)return;
       
       if(wasLastClosedOrderInThisBar())return;
       
-      evaluateNewOrder(pattern.sl,pattern.tp,pattern.bodyWorkLimit,pattern.sl_tp_limit); 
+      evaluateNewOrder(pattern.sl,pattern.tp,pattern.sl_tp_limit); 
  }
  
  void checkOrderTimeOut(double orderTimeOut){
@@ -121,7 +122,7 @@ class Trend_robot {
          return false;  
       }
    
-      printf("Error!!! FAILED to take order from history:"+GetLastError());
+      printf("Error!!! FAILED to take order from history:"+DoubleToStr(GetLastError()));
       return true;
    }
  
@@ -130,12 +131,12 @@ class Trend_robot {
 
     int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
-      printf("magic:"+num);
+      printf("magic:"+DoubleToStr(num));
       return num;
    
    }
 
- void evaluateNewOrder(double pattern_sl,double pattern_tp,double bodyWorkLimit, double tp_sl_limit){
+ void evaluateNewOrder(double pattern_sl,double pattern_tp, double tp_sl_limit){
  
    double extream,sl_pips,tp_pips;
    double sl=-1;
@@ -150,9 +151,9 @@ class Trend_robot {
       
       orderType=OP_BUY;
       colorOrder=Blue;
-      sl_pips=(Ask-extream)*pattern_sl-SPREAD/KOEF;
+      sl_pips=(Ask-extream)*pattern_sl+SPREAD/KOEF;
       sl=Ask-sl_pips;
-      tp_pips=(Bid-extream)*pattern_tp+SPREAD/KOEF;
+      tp_pips=(Bid-extream)*pattern_tp-SPREAD/KOEF;
       tp=Bid+tp_pips;
      
    }else{
@@ -196,7 +197,7 @@ class Trend_robot {
   void alertResult(int ticket,double tp, double sl,double volume){      
         if(ticket<0) 
       { 
-         Print("Order open failed with error #",GetLastError(),", profit:",tp,", loss:",sl,", Lot:"+volume); 
+         Print("Order open failed with error #",DoubleToStr(GetLastError()),", profit:",DoubleToStr(tp),", loss:",DoubleToStr(sl),", Lot:"+DoubleToStr(volume)); 
       } 
       else 
       {
