@@ -5,7 +5,7 @@
 input double  MaxLossDollar=50;
 input double  TP_SL_Limit=5.0;
 input int     ORDER_TIME_OUT=40;//in hours
-input int     HISTORY_DEPTH=10;
+input int     HISTORY_DEPTH=5;
 const int     timeFrame=PERIOD_H1;
 const double  initSL=1;
 const double  initTP=-0.5;

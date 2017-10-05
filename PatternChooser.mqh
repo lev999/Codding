@@ -33,8 +33,8 @@ class PatternChooser{
       double tp_max=0;
       double sl_max=0;
       
-      for(double profit=0.3;profit<=1.5;profit=profit+0.1){
-       for(double loss=-0.3;loss>=-1.5;loss=loss-0.1){ 
+      for(double profit=0.3;profit<=1.0;profit=profit+0.1){
+       for(double loss=-0.3;loss>=-1.0;loss=loss-0.1){ 
           if(profit>MathAbs(loss))  {
              double result=NormalizeDouble(getEquity(profit,loss), 2);           
              if(result>max){
