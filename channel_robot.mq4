@@ -38,15 +38,14 @@ class Trend_robot {
       
       if(OrdersTotal()!=0)return;      
 
-      if(!channelManager.existsValidChannel()){return;}
+      if(!channelManager.existsValidChannel()){return;}     
       
-      
-      //ChannelParams channelParams=channelManager.getChannelParams();
-      //if(isNewOrderValid(channelParams.high)){
-      //   openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_BUY);         
-      //}else if(isNewOrderValid(channelParams.low)){
-      //   openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_SELL);                 
-      //} 
+      ChannelParams channelParams=channelManager.getChannelParams();
+      if(isNewOrderValid(channelParams.low)){
+         openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_BUY);         
+      }else if(isNewOrderValid(channelParams.high)){
+         openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_SELL);                 
+      } 
  }
     
    bool isNewOrderValid(double border){
@@ -68,7 +67,6 @@ class Trend_robot {
 
  void openOrder(double pattern_sl,double pattern_tp,int orderType){
  
-   double extream,sl_pips,tp_pips;
    double sl=-1;
    double tp=-1;
    color  colorOrder;   
@@ -76,11 +74,13 @@ class Trend_robot {
    if(orderType==OP_SELL){
    // sell     
       sl=Bid+(pattern_sl+SPREAD)/KOEF;
-      tp=Ask-(pattern_tp-SPREAD)/KOEF;         
+      tp=Ask-(pattern_tp-SPREAD)/KOEF;      
+      colorOrder=Red;         
    }else{
     // buy
       sl=Ask-(pattern_sl+SPREAD)/KOEF;
       tp=Bid+(pattern_tp-SPREAD)/KOEF;
+      colorOrder=Blue;
    }
    
    double volume=getLot(sl,orderType); 

@@ -131,8 +131,7 @@ class Trend_robot {
       
    if((iOpen(NULL,0,1)<iClose(NULL,0,1))){
       // buy     
-      extream=iLow(NULL,0,1);
-      
+      extream=iLow(NULL,0,1);      
       orderType=OP_BUY;
       colorOrder=Blue;
       sl_pips=(Ask-extream)*pattern_sl+SPREAD/KOEF;
@@ -143,7 +142,6 @@ class Trend_robot {
    }else{
    // sell
       extream=iHigh(NULL,0,1);
-
       orderType=OP_SELL;
       colorOrder=Red;
       sl_pips=(extream-Bid)*pattern_sl+SPREAD/KOEF;
