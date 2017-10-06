@@ -1,66 +1,76 @@
-#include <Shared.mqh>
+#include <Shared2.mqh>
 #include <ChannelManager.mqh>
 
 input double  MaxLossDollar=50;
-input double  TP_SL_Limit=5.0;
-input int     ORDER_TIME_OUT=40;//in hours
-input int     HISTORY_DEPTH=5;
 input int     MIN_WORKING_CHANNEL=10; 
-
-const int     timeFrame=PERIOD_H1;
-const double  initSL=1;
-const double  initTP=-0.5;
 const double  SPREAD=2;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 0                                                |
+//+------------------------------------------------------------------+
+//+------------------------------------------------------------------+
+//|   startOneHourDelay  is valid only for 1 hour period                           |
 //+------------------------------------------------------------------+
 
 
   
 class Trend_robot { 
   
- public:
+
    
-   int KOEF;         
+   double KOEF;         
    int currentOrderTicket;
-   Shared *shared;
+   Shared2 *shared;
    ChannelManager *channelManager;
     
-   
+public:  
  Trend_robot() {
-      shared = new Shared(); 
+      shared = new Shared2(SPREAD); 
       KOEF=shared.getKoef();   
       currentOrderTicket=-1; 
-      channelManager= new ChannelManager(MIN_WORKING_CHANNEL);
+      channelManager= new ChannelManager(MIN_WORKING_CHANNEL,shared);
+      startDelayHour=-1;
  } 
    
+   int currentChannelId;
  void onTick(){               
+ 
+      if(isOneHourDelayActive()){return;}
       
-      if(OrdersTotal()!=0)return;      
-
-      if(!channelManager.existsValidChannel()){return;}     
-      
-      ChannelParams channelParams=channelManager.getChannelParams();
-      if(isNewOrderValid(channelParams.low)){
-         openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_BUY);         
-      }else if(isNewOrderValid(channelParams.high)){
-         openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_SELL);                 
-      } 
+      if(!channelManager.existsValidChannel()){return;}  
+      else{
+          ChannelParams channelParams=channelManager.getChannelParams();          
+          if(OrdersTotal()!=0){
+             if(currentChannelId!=channelParams.id){               
+               closeAllOrders();
+               printf("Order was closed, because new channel created! New order can be opened after 1 hour");
+               startDelayHour=Hour();         
+             }
+          }else{          
+             currentChannelId=channelParams.id;
+            if(shared.isPriceNear(channelParams.low)){
+               openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_BUY);         
+            }else if(shared.isPriceNear(channelParams.high)){
+               openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_SELL);                 
+            }
+          }  
+      }        
  }
-    
-   bool isNewOrderValid(double border){
-      double UP=border+SPREAD/KOEF;
-      double DOWN=border-SPREAD/KOEF;   
-      if(Bid>DOWN && Bid<UP){
-         return true;
-      }else{
+ 
+    int startDelayHour;    
+    bool isOneHourDelayActive(){
+       if(startDelayHour!=Hour()){       
+         startDelayHour=-1;
          return false;
-      }     
-   }   
+       }
+       else{
+         return true;
+       }
+    }
+    
+  
 
  int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
-      printf("magic:"+DoubleToStr(num));
       return num;
    
    }
