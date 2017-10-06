@@ -12,11 +12,13 @@ const double  SPREAD=2;
 //+------------------------------------------------------------------+
 
 
+
+struct OrderParams{
+   double sl_pips,tp_pips;
+   int type;
+};
   
 class Trend_robot { 
-  
-
-   
    double KOEF;         
    int currentOrderTicket;
    Shared2 *shared;
@@ -31,7 +33,7 @@ public:
       startDelayHour=-1;
  } 
    
-   int currentChannelId;
+ int currentChannelId;
  void onTick(){               
  
       if(isOneHourDelayActive()){return;}
@@ -46,56 +48,78 @@ public:
                startDelayHour=Hour();         
              }
           }else{          
-             currentChannelId=channelParams.id;
+            currentChannelId=channelParams.id;
+            double h=channelParams.height;
+            OrderParams orderParams;             
+            orderParams.sl_pips=getSL(h);
+            orderParams.tp_pips=getTP(h);
+            
             if(shared.isPriceNear(channelParams.low)){
-               openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_BUY);         
+               orderParams.type=OP_BUY;   
+               openOrder(orderParams);         
             }else if(shared.isPriceNear(channelParams.high)){
-               openOrder(channelParams.height*0.5,channelParams.height*0.75,OP_SELL);                 
+               orderParams.type=OP_SELL;
+               openOrder(orderParams);                 
             }
           }  
       }        
  }
  
-    int startDelayHour;    
-    bool isOneHourDelayActive(){
-       if(startDelayHour!=Hour()){       
-         startDelayHour=-1;
-         return false;
-       }
-       else{
-         return true;
-       }
+ double getSL(double height){
+   if(height>=MIN_WORKING_CHANNEL*1.5){
+      return height*0.5;
+   }else{
+      return height+SPREAD;
+   }
+ }
+ 
+  double getTP(double height){
+   if(height>=MIN_WORKING_CHANNEL*1.5){
+      return height*0.75;
+   }else{
+      return height+SPREAD;
+   }
+ }
+ 
+ 
+ int startDelayHour;    
+ bool isOneHourDelayActive(){
+    if(startDelayHour!=Hour()){       
+      startDelayHour=-1;
+      return false;
     }
-    
-  
-
+    else{
+      return true;
+    }
+ }
+      
  int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
       return num;
    
    }
 
- void openOrder(double pattern_sl,double pattern_tp,int orderType){
+ void openOrder(OrderParams &order){
  
    double sl=-1;
    double tp=-1;
    color  colorOrder;   
    
-   if(orderType==OP_SELL){
+   if(order.type==OP_SELL){
    // sell     
-      sl=Bid+(pattern_sl+SPREAD)/KOEF;
-      tp=Ask-(pattern_tp-SPREAD)/KOEF;      
+      sl=Bid+order.sl_pips/KOEF;
+      tp=Ask-order.tp_pips/KOEF;      
       colorOrder=Red;         
    }else{
     // buy
-      sl=Ask-(pattern_sl+SPREAD)/KOEF;
-      tp=Bid+(pattern_tp-SPREAD)/KOEF;
+      sl=Ask-order.sl_pips/KOEF;
+      tp=Bid+order.tp_pips/KOEF;
       colorOrder=Blue;
    }
    
-   double volume=getLot(sl,orderType); 
+   double volume=getLot(sl,order.type); 
 
-   currentOrderTicket=OrderSend(Symbol(),orderType,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
+   currentOrderTicket=OrderSend(Symbol(),order.type,volume,Bid,300,sl,tp,"My order",getMagicNumber(),0,colorOrder); 
    alertResult(currentOrderTicket,tp,sl,volume);
  }
  
