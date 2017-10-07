@@ -5,7 +5,7 @@ input double  MaxLossDollar=50;
 input int     MIN_WORKING_CHANNEL=10; 
 const double  SPREAD=2;
 //+------------------------------------------------------------------+
-//|                  SET SPREAD FOR TESTING to 0                                                |
+//|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                |
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
 //|   startOneHourDelay  is valid only for 1 hour period                           |
@@ -47,7 +47,8 @@ public:
                printf("Order was closed, because new channel created! New order can be opened after 1 hour");
                startDelayHour=Hour();         
              }
-          }else{          
+          }else{
+                      
             currentChannelId=channelParams.id;
             double h=channelParams.height;
             OrderParams orderParams;             
@@ -55,14 +56,38 @@ public:
             orderParams.tp_pips=getTP(h);
             
             if(shared.isPriceNear(channelParams.low)){
-               orderParams.type=OP_BUY;   
-               openOrder(orderParams);         
+               orderParams.type=OP_BUY;
+               if(isTransactionSuccess(orderParams.type)){
+                  openOrder(orderParams); 
+               }   
+                       
             }else if(shared.isPriceNear(channelParams.high)){
                orderParams.type=OP_SELL;
-               openOrder(orderParams);                 
+               if(isTransactionSuccess(orderParams.type)){
+                  openOrder(orderParams); 
+               }                    
             }
           }  
       }        
+ }
+ 
+ bool isTransactionSuccess(int type){
+    if(OrdersHistoryTotal()==0){
+      return true;
+    }else{    
+      for(int i=0;i<OrdersHistoryTotal();i++){
+     
+        if(OrderSelect(currentOrderTicket,SELECT_BY_TICKET,MODE_HISTORY)){
+           if(OrderProfit()<0&&OrderType()==type){
+            printf("Blocked order, because of last minus");
+            return false;
+           }
+         return true;  
+        }           
+      }
+      printf("ERROR: isTransactionSuccess has bug");
+      return false; 
+    }
  }
  
  double getSL(double height){

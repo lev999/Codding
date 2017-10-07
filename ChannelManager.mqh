@@ -22,6 +22,7 @@ struct LineId{
    string name;
    double price;
    datetime time;
+   datetime timeShift;
 };
 
 class ChannelManager{
@@ -98,14 +99,17 @@ class ChannelManager{
       
       if(shared.isPriceNear(High[shift],upperLine.price)){
          ObjectDelete(0,upperLine.name);
+         
       }else{
          upperLine.id=getMagicNumber();
          upperLine.price=High[shift];     
+         upperLine.timeShift=Time[shift];     
       } 
      
       upperLine.name = DoubleToStr(upperLine.id);      
       upperLine.time=Time[0];
-      ObjectCreate(upperLine.name, OBJ_TREND, 0, Time[shift], upperLine.price, upperLine.time, upperLine.price);
+      
+      ObjectCreate(upperLine.name, OBJ_TREND, 0,upperLine.timeShift , upperLine.price, upperLine.time, upperLine.price);
       ObjectSet(upperLine.name, OBJPROP_RAY, false);      
    }
    
@@ -134,14 +138,16 @@ class ChannelManager{
      
       if(shared.isPriceNear(Low[shift],lowerLine.price)){
          ObjectDelete(0,lowerLine.name);
+         
       }else{
          lowerLine.id = getMagicNumber();
          lowerLine.price = Low[shift];
+         lowerLine.timeShift=Time[shift];     
       }
             
       lowerLine.name = DoubleToStr(lowerLine.id);      
       lowerLine.time = Time[0];
-      ObjectCreate(lowerLine.name, OBJ_TREND, 0, Time[shift], lowerLine.price,lowerLine.time, lowerLine.price);
+      ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
       ObjectSet(lowerLine.name, OBJPROP_RAY, false);      
    }
    
