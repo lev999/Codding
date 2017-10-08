@@ -36,39 +36,56 @@ public:
  int currentChannelId;
  void onTick(){               
  
-      if(isOneHourDelayActive()){return;}
-      
-      if(!channelManager.existsValidChannel()){return;}  
-      else{
-          ChannelParams channelParams=channelManager.getChannelParams();          
+      //if(isOneHourDelayActive()){return;}                  
           if(OrdersTotal()!=0){
-             if(currentChannelId!=channelParams.id){               
-               closeAllOrders();
-               printf("Order was closed, because new channel created! New order can be opened after 1 hour");
-               startDelayHour=Hour();         
-             }
+             //if(currentChannelId!=channelParams.id){               
+               //closeAllOrders();
+               //printf("Order was closed, because new channel created! New order can be opened after 1 hour");
+               //startDelayHour=Hour();         
+             //}
           }else{
-                      
-            currentChannelId=channelParams.id;
-            double h=channelParams.height;
-            OrderParams orderParams;             
-            orderParams.sl_pips=getSL(h);
-            orderParams.tp_pips=getTP(h);
-            
-            if(shared.isPriceNear(channelParams.low)){
-               orderParams.type=OP_BUY;
-               if(isTransactionSuccess(orderParams.type)){
-                  openOrder(orderParams); 
-               }   
-                       
-            }else if(shared.isPriceNear(channelParams.high)){
-               orderParams.type=OP_SELL;
-               if(isTransactionSuccess(orderParams.type)){
-                  openOrder(orderParams); 
-               }                    
+            if(!channelManager.existsValidChannel()){
+               return;
+               } 
+            else{            
+               ChannelParams channelParams=channelManager.getChannelParams();           
+               currentChannelId=channelParams.id;
+               double h=channelParams.height;
+               OrderParams orderParams;             
+               orderParams.sl_pips=getSL(h);
+               orderParams.tp_pips=getTP(h);
+               
+                if(shared.isPriceNear(channelParams.low)||shared.isPriceNear(channelParams.high)){
+                  orderParams.type=OP_BUY;
+                  openOrder(orderParams);
+                  orderParams.type=OP_SELL;
+                  openOrder(orderParams);
+                }            
             }
+            
           }  
-      }        
+            
+ }
+ 
+ bool lastOrderWasNotInTheSameHour(){
+ 
+  if(OrdersHistoryTotal()==0){
+      return true;
+    }else{    
+      for(int i=0;i<OrdersHistoryTotal();i++){
+     
+        if(OrderSelect(currentOrderTicket,SELECT_BY_TICKET,MODE_HISTORY)){
+           if(TimeHour(OrderCloseTime())==Hour()){
+            //printf("Blocked order, because of last order in the same hour");
+            return false;
+           }
+         return true;  
+        }           
+      }
+      printf("ERROR: lastOrderWasNotInTheSameHour has bug");
+      return false; 
+    }
+ 
  }
  
  bool isTransactionSuccess(int type){
@@ -79,7 +96,7 @@ public:
      
         if(OrderSelect(currentOrderTicket,SELECT_BY_TICKET,MODE_HISTORY)){
            if(OrderProfit()<0&&OrderType()==type){
-            printf("Blocked order, because of last minus");
+            //printf("Blocked order, because of last minus");
             return false;
            }
          return true;  
