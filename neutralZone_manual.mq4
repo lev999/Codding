@@ -1,9 +1,9 @@
 #include <Shared2.mqh>
-#include <ChannelManager.mqh>
 
 input double  MaxLossDollar=50;
 input int     MIN_WORKING_CHANNEL=10; 
 const double  SPREAD=2;
+const string flatName="Flat";
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                |
 //+------------------------------------------------------------------+
@@ -17,42 +17,35 @@ struct OrderParams{
    double sl_pips,tp_pips;
    int type;
 };
-  
+
+ struct ChannelParams{
+   double height;
+   double low;
+   double high;
+   bool isValid;
+}; 
+
 class Trend_robot { 
    double KOEF;         
    int currentOrderTicket;
    Shared2 *shared;
-   ChannelManager *channelManager;
     
 public:  
  Trend_robot() {
       shared = new Shared2(SPREAD); 
       KOEF=shared.getKoef();   
       currentOrderTicket=-1; 
-      channelManager= new ChannelManager(MIN_WORKING_CHANNEL,shared);
       startDelayHour=-1;
  } 
    
- int currentChannelId;
- void onTick(){               
- 
-   //if(OrdersTotal()==1){
-   //   setNonLoss();   
-   //}
-   //if(isOneHourDelayActive()){return;}                  
-    //if(OrdersTotal()==0){
-       //if(currentChannelId!=channelParams.id){               
-         //closeAllOrders();
-         //printf("Order was closed, because new channel created! New order can be opened after 1 hour");
-         //startDelayHour=Hour();         
-       //}
-    if(OrdersTotal()==0){
-      if(!channelManager.existsValidChannel()){
-         return;
-         } 
-      else{            
-         ChannelParams channelParams=channelManager.getChannelParams();           
-         currentChannelId=channelParams.id;
+ void onTick(){         
+       
+   updateChannelParams();
+   if(channelParams.high<channelParams.low) {
+      closeAllOrders();   
+   }
+   else
+    if(OrdersTotal()==0&&channelParams.isValid){                                    
          double h=channelParams.height;
          OrderParams orderParams;             
          orderParams.sl_pips=h*0.5;
@@ -63,12 +56,71 @@ public:
             openOrder(orderParams);
             orderParams.type=OP_SELL;
             openOrder(orderParams);
-          }            
-      }
-      
-    }  
+      }      
+    } 
+    else if(OrdersTotal()==1&&isNearTP()){
+        printf("Order was closed, because it was near TP");
+        closeAllOrders();
+    } 
             
  }
+ 
+  bool isNearTP(){
+     if(OrderSelect(0,SELECT_BY_POS,MODE_TRADES)){
+            if(shared.isPriceNear(OrderTakeProfit())){             
+             return true;
+            }else{
+               return false;
+               printf("BUG: OrderCloseToTP");
+            }
+      }
+      return false;
+  }
+   ChannelParams channelParams;
+   void updateChannelParams(){
+   
+      double pr1=ObjectGetDouble(0,flatName,OBJPROP_PRICE,0);
+      double pr2=ObjectGetDouble(0,flatName,OBJPROP_PRICE,1);
+      double pr3=ObjectGetDouble(0,flatName,OBJPROP_PRICE,2);
+      
+      double t1=ObjectGet(flatName,OBJPROP_TIME1);
+      double t2=ObjectGet(flatName,OBJPROP_TIME2);
+      double t3=ObjectGet(flatName,OBJPROP_TIME3);
+      
+      if(pr1!=pr2){
+         moveChannel(pr1,t2);
+      }
+      
+//      ENUM_LINE_STYLE lineStyle=ObjectGet(flatName,OBJPROP_STYLE);
+//      if(lineStyle==STYLE_SOLID){
+//         
+//      }
+
+      if((t2-t1)!=0){
+         double flatA=(pr2-pr1)/(t2-t1);
+         channelParams.low=(pr2-flatA*t2);
+         channelParams.high=(pr3-flatA*t3);
+         channelParams.height=MathAbs(pr1-pr3)*KOEF;
+         channelParams.isValid=true;
+      }else{
+         channelParams.isValid=false;
+         channelParams.low=0;
+         channelParams.high=0;
+         channelParams.height=0;
+      }
+   }
+ 
+   void moveChannel(double newPrice2, double t2){ 
+     if(!ObjectMove(flatName,1,t2,newPrice2)) 
+     { 
+         Print(__FUNCTION__, 
+            ": failed to move CHANNEL point! Error code = ",GetLastError()); 
+     }else{
+         ChartRedraw(0);
+     } 
+      
+   }
+ 
  
  void setNonLoss(){
     if(OrderSelect(0,SELECT_BY_POS)){      

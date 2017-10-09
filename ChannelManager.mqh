@@ -75,6 +75,7 @@ class ChannelManager{
       drawLowerBorder();
       if(TimeHour(upperLine.time)==TimeHour(Time[0])&&TimeHour(lowerLine.time)==TimeHour(Time[0])&&MathAbs(lowerLine.price-upperLine.price)*shared.getKoef()>MIN_WORKING_CHANNEL){
          hasValidChannel=true;
+         drawChannel();
       }else{
          hasValidChannel=false;      
       }
@@ -109,10 +110,18 @@ class ChannelManager{
       upperLine.name = DoubleToStr(upperLine.id);      
       upperLine.time=Time[0];
       
+    }
+   
+   void drawChannel(){
+      
       ObjectCreate(upperLine.name, OBJ_TREND, 0,upperLine.timeShift , upperLine.price, upperLine.time, upperLine.price);
       ObjectSet(upperLine.name, OBJPROP_RAY, false);      
-   }
+ 
+     ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
+      ObjectSet(lowerLine.name, OBJPROP_RAY, false);  
+
    
+   }
    
    int getUpperPickShift(){
       int i=1;
@@ -147,9 +156,7 @@ class ChannelManager{
             
       lowerLine.name = DoubleToStr(lowerLine.id);      
       lowerLine.time = Time[0];
-      ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
-      ObjectSet(lowerLine.name, OBJPROP_RAY, false);      
-   }
+    }
    
    void drawLowerBorder(){
       int pickShift=getLowerPickShift();         
