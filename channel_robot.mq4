@@ -2,7 +2,7 @@
 #include <ChannelManager.mqh>
 
 input double  MaxLossDollar=50;
-input int     MIN_WORKING_CHANNEL=10; 
+input int     MIN_WORKING_CHANNEL=20; 
 const double  SPREAD=2;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                |
@@ -58,12 +58,12 @@ public:
          orderParams.sl_pips=h*0.5;
          orderParams.tp_pips=h*1.0;
          
-          if(shared.isPriceNear(channelParams.low)||shared.isPriceNear(channelParams.high)){
-            orderParams.type=OP_BUY;
-            openOrder(orderParams);
-            orderParams.type=OP_SELL;
-            openOrder(orderParams);
-          }            
+          //if(shared.isPriceNear(channelParams.low)||shared.isPriceNear(channelParams.high)){
+          //  orderParams.type=OP_BUY;
+          //  openOrder(orderParams);
+          //  orderParams.type=OP_SELL;
+          //  openOrder(orderParams);
+          //}            
       }
       
     }  

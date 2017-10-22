@@ -73,66 +73,67 @@ class ChannelManager{
    void checkForNewChannel(){
       drawUpperBorder();
       drawLowerBorder();
-      if(TimeHour(upperLine.time)==TimeHour(Time[0])&&TimeHour(lowerLine.time)==TimeHour(Time[0])&&MathAbs(lowerLine.price-upperLine.price)*shared.getKoef()>MIN_WORKING_CHANNEL){
-         hasValidChannel=true;
-         drawChannel();
+      if(areBordersUpToDate()&&isChannelHeightValid()){
+         hasValidChannel=true;         
       }else{
          hasValidChannel=false;      
       }
       
       
    }
+  
+   bool isChannelHeightValid(){ 
+       if(MathAbs(lowerLine.price-upperLine.price)*shared.getKoef()>MIN_WORKING_CHANNEL ){
+         return true;
+       }else{
+         return false;
+       } 
+    }
+  
+   
+   bool areBordersUpToDate(){
+      if(TimeHour(upperLine.time)==TimeHour(Time[0])&&TimeHour(lowerLine.time)==TimeHour(Time[0])){
+         return true;
+      }else{
+         return false;
+      }
+   }
    //+------------------------------------------------------------------+
    //|                 UPPER BORDER                                                 |
    //+------------------------------------------------------------------+
    
-    void drawUpperBorder(){
-      //double value;
-      int pickShift=getUpperPickShift();         
-      if(pickShift!=-1) {
-         //value=High[pickShift];
-         createUpperLine(pickShift);
-      }       
-    }
-   
    LineId upperLine; 
-   void createUpperLine(int shift){
+   void drawUpperBorder(){
+      int shift=getUpperPickShift(); 
+      if(shift==-1)return;
       
       if(shared.isPriceNear(High[shift],upperLine.price)){
          ObjectDelete(0,upperLine.name);
-         
       }else{
          upperLine.id=getMagicNumber();
          upperLine.price=High[shift];     
          upperLine.timeShift=Time[shift];     
-      } 
-     
-      upperLine.name = DoubleToStr(upperLine.id);      
+         upperLine.name = DoubleToStr(upperLine.id);      
+      }
       upperLine.time=Time[0];
-      
-    }
-   
-   void drawChannel(){
-      
       ObjectCreate(upperLine.name, OBJ_TREND, 0,upperLine.timeShift , upperLine.price, upperLine.time, upperLine.price);
       ObjectSet(upperLine.name, OBJPROP_RAY, false);      
  
-     ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
-      ObjectSet(lowerLine.name, OBJPROP_RAY, false);  
-
+    }
    
-   }
-   
+    
    int getUpperPickShift(){
       int i=1;
       double val1=0,val2=0,val3=0;
       
-      while(i<5){
+      while(i<50){
        val1=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i);
        val2=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i+1);
        val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i+2);
        if(val1<val2&&val3<val2){
-         return i+1;
+         if(High[i+1]>Bid||shared.isPriceNear(Bid,High[i+1])){
+            return i+1;
+         }         
        }
       i++;
       }
@@ -143,38 +144,36 @@ class ChannelManager{
    //+------------------------------------------------------------------+
    
    LineId lowerLine; 
-   void createLowerLine(int shift){     
+   void drawLowerBorder(){ 
+   int shift=getLowerPickShift();     
+     if(shift==-1)return;
      
       if(shared.isPriceNear(Low[shift],lowerLine.price)){
-         ObjectDelete(0,lowerLine.name);
-         
-      }else{
+          ObjectDelete(0,lowerLine.name);              
+      }else{         
          lowerLine.id = getMagicNumber();
          lowerLine.price = Low[shift];
-         lowerLine.timeShift=Time[shift];     
+         lowerLine.timeShift=Time[shift];                
+         lowerLine.name = DoubleToStr(lowerLine.id);      
       }
-            
-      lowerLine.name = DoubleToStr(lowerLine.id);      
       lowerLine.time = Time[0];
-    }
+     ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
+     ObjectSet(lowerLine.name, OBJPROP_RAY, false);  
+   }
    
-   void drawLowerBorder(){
-      int pickShift=getLowerPickShift();         
-      if(pickShift!=-1) {
-         createLowerLine(pickShift);
-      }       
-    }
    
    int getLowerPickShift(){
       int i=1;
       double val1=0,val2=0,val3=0;
       
-      while(i<5){
+      while(i<50){
        val1=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i);
        val2=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+1);
        val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+2);
        if(val1>val2&&val3>val2){
-         return i+1;
+         if(Low[i+1]<Bid||shared.isPriceNear(Bid,Low[i+1])){
+            return i+1;
+         } 
        }
       i++;
       }
