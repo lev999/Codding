@@ -19,10 +19,14 @@ struct ChannelParams{
 
 struct LineId{
    int id;
-   string name;
    double price;
    datetime time;
    datetime timeShift;
+};
+
+struct ChannelLines{
+   LineId upper;
+   LineId lower;
 };
 
 class ChannelManager{
@@ -45,10 +49,10 @@ class ChannelManager{
    
    ChannelParams getChannelParams(){   
       if(hasValidChannel){      
-       params.height=MathAbs(lowerLine.price-upperLine.price)*shared.getKoef();
-       params.high=upperLine.price;
-       params.low=lowerLine.price;
-       params.id=lowerLine.id+upperLine.id;       
+       params.height=MathAbs(lastValidChannel.lower.price-lastValidChannel.upper.price)*shared.getKoef();
+       params.high=lastValidChannel.upper.price;
+       params.low=lastValidChannel.lower.price;
+       params.id=lastValidChannel.lower.id+lastValidChannel.upper.id;       
        
       }else{
          printf("Error. Recieved request for params of invalid channel");
@@ -70,55 +74,74 @@ class ChannelManager{
     
  private:
  
+ ChannelLines tmpChannel;
+ ChannelLines lastValidChannel;
+ 
    void checkForNewChannel(){
-      drawUpperBorder();
-      drawLowerBorder();
-      if(areBordersUpToDate()&&isChannelHeightValid()){
-         hasValidChannel=true;         
-      }else{
-         hasValidChannel=false;      
+   
+      tmpChannel.upper=getUpperLine();
+      tmpChannel.lower=getLowerLine();
+      
+      if(isChannelValid(tmpChannel)){
+          hasValidChannel=true; 
+          drawNewChannel();
+          tmpChannel=lastValidChannel;       
       }
-      
-      
    }
-  
-   bool isChannelHeightValid(){ 
-       if(MathAbs(lowerLine.price-upperLine.price)*shared.getKoef()>MIN_WORKING_CHANNEL ){
-         return true;
-       }else{
-         return false;
-       } 
-    }
+      
+  bool isChannelValid(ChannelLines &channel){
+      
+      if(channel.lower.id==-1 || channel.upper.id==-1)return false;   
+      if(MathAbs(channel.lower.price-channel.upper.price)*shared.getKoef()<MIN_WORKING_CHANNEL )return false;   
+      return true;
+  }
   
    
-   bool areBordersUpToDate(){
-      if(TimeHour(upperLine.time)==TimeHour(Time[0])&&TimeHour(lowerLine.time)==TimeHour(Time[0])){
-         return true;
-      }else{
-         return false;
-      }
-   }
+  void drawNewChannel(){
+ 
+      if(shared.isPriceNear(tmpChannel.upper.price,lastValidChannel.upper.price)){
+          ObjectDelete(0,DoubleToStr(lastValidChannel.upper.id) );
+          printf("deleted upper");
+      } 
+      printf("before:tmpChannel.upper.price"+tmpChannel.upper.price);
+      createObject(tmpChannel.upper);
+ 
+      if(shared.isPriceNear(tmpChannel.lower.price,lastValidChannel.lower.price)){
+          ObjectDelete(0,DoubleToStr(lastValidChannel.lower.id));
+          printf("deleted lower");
+      } 
+      
+      printf("before:tmpChannel.lower.price"+tmpChannel.lower.price);
+      createObject(tmpChannel.lower);
+  }
+  
+  
+  
+  void createObject(const LineId& line){
+     printf("line.price="+line.price);
+  
+     ObjectCreate(DoubleToStr(line.id), OBJ_TREND, 0,line.timeShift , line.price, line.time, line.price);
+     ObjectSet(DoubleToStr(line.id), OBJPROP_RAY, false); 
+  }
+  
+   
    //+------------------------------------------------------------------+
    //|                 UPPER BORDER                                                 |
    //+------------------------------------------------------------------+
    
-   LineId upperLine; 
-   void drawUpperBorder(){
+   LineId getUpperLine(){      
+      LineId line;
+      line.id=-1;
       int shift=getUpperPickShift(); 
-      if(shift==-1)return;
+      printf("UPPER BORDER:"+shift);
+      if(shift==-1) return line;
       
-      if(shared.isPriceNear(High[shift],upperLine.price)){
-         ObjectDelete(0,upperLine.name);
-      }else{
-         upperLine.id=getMagicNumber();
-         upperLine.price=High[shift];     
-         upperLine.timeShift=Time[shift];     
-         upperLine.name = DoubleToStr(upperLine.id);      
-      }
-      upperLine.time=Time[0];
-      ObjectCreate(upperLine.name, OBJ_TREND, 0,upperLine.timeShift , upperLine.price, upperLine.time, upperLine.price);
-      ObjectSet(upperLine.name, OBJPROP_RAY, false);      
- 
+      line.id=getMagicNumber();
+      line.price=High[shift];     
+      line.timeShift=Time[shift]; 
+      line.time=Time[0];
+  
+      return line;
     }
    
     
@@ -142,23 +165,19 @@ class ChannelManager{
    //+------------------------------------------------------------------+
    //|                 LOWER BORDER                                                 |
    //+------------------------------------------------------------------+
-   
-   LineId lowerLine; 
-   void drawLowerBorder(){ 
-   int shift=getLowerPickShift();     
-     if(shift==-1)return;
-     
-      if(shared.isPriceNear(Low[shift],lowerLine.price)){
-          ObjectDelete(0,lowerLine.name);              
-      }else{         
-         lowerLine.id = getMagicNumber();
-         lowerLine.price = Low[shift];
-         lowerLine.timeShift=Time[shift];                
-         lowerLine.name = DoubleToStr(lowerLine.id);      
-      }
-      lowerLine.time = Time[0];
-     ObjectCreate(lowerLine.name, OBJ_TREND, 0, lowerLine.timeShift, lowerLine.price,lowerLine.time, lowerLine.price);
-     ObjectSet(lowerLine.name, OBJPROP_RAY, false);  
+    
+   LineId getLowerLine(){ 
+      LineId line;
+      line.id=-1;
+      int shift=getLowerPickShift(); 
+       printf("LOWER BORDER:"+shift);
+     if(shift==-1) return line;
+       
+      line.id = getMagicNumber();
+      line.price = Low[shift];
+      line.timeShift=Time[shift];   
+      line.time = Time[0];
+      return line;
    }
    
    
