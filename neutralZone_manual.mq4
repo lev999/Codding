@@ -96,14 +96,17 @@ public:
 //         
 //      }
 
+      if(t1==t3){
+      channelParams.isValid=true;
+      }else{
+      channelParams.isValid=false;
+      }
       if((t2-t1)!=0){
          double flatA=(pr2-pr1)/(t2-t1);
          channelParams.low=(pr2-flatA*t2);
          channelParams.high=(pr3-flatA*t3);
-         channelParams.height=MathAbs(pr1-pr3)*KOEF;
-         channelParams.isValid=true;
-      }else{
-         channelParams.isValid=false;
+         channelParams.height=MathAbs(pr1-pr3)*KOEF;        
+      }else{         
          channelParams.low=0;
          channelParams.high=0;
          channelParams.height=0;
