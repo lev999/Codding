@@ -85,14 +85,23 @@ class ChannelManager{
       if(isChannelValid(tmpChannel)){
           hasValidChannel=true; 
           drawNewChannel();
-          tmpChannel=lastValidChannel;       
+          lastValidChannel=tmpChannel;       
+      }else{
+         hasValidChannel=false;      
       }
    }
       
   bool isChannelValid(ChannelLines &channel){
       
-      if(channel.lower.id==-1 || channel.upper.id==-1)return false;   
-      if(MathAbs(channel.lower.price-channel.upper.price)*shared.getKoef()<MIN_WORKING_CHANNEL )return false;   
+      if(channel.lower.id==-1 || channel.upper.id==-1){
+         printf("channel is not valid because no one/two borders");
+         return false;         
+      }
+      double realHeight=NormalizeDouble(MathAbs(channel.lower.price-channel.upper.price)*shared.getKoef(),2);   
+      if(realHeight<MIN_WORKING_CHANNEL){
+         printf("channel is not valid because heigh: "+DoubleToStr(realHeight)+" < "+DoubleToStr(MIN_WORKING_CHANNEL));        
+         return false;
+      }   
       return true;
   }
   
@@ -101,28 +110,23 @@ class ChannelManager{
  
       if(shared.isPriceNear(tmpChannel.upper.price,lastValidChannel.upper.price)){
           ObjectDelete(0,DoubleToStr(lastValidChannel.upper.id) );
-          printf("deleted upper");
       } 
-      printf("before:tmpChannel.upper.price"+tmpChannel.upper.price);
       createObject(tmpChannel.upper);
  
       if(shared.isPriceNear(tmpChannel.lower.price,lastValidChannel.lower.price)){
           ObjectDelete(0,DoubleToStr(lastValidChannel.lower.id));
-          printf("deleted lower");
       } 
       
-      printf("before:tmpChannel.lower.price"+tmpChannel.lower.price);
       createObject(tmpChannel.lower);
   }
   
   
   
   void createObject(const LineId& line){
-     printf("line.price="+line.price);
-  
      ObjectCreate(DoubleToStr(line.id), OBJ_TREND, 0,line.timeShift , line.price, line.time, line.price);
      ObjectSet(DoubleToStr(line.id), OBJPROP_RAY, false); 
   }
+ 
   
    
    //+------------------------------------------------------------------+
@@ -133,7 +137,6 @@ class ChannelManager{
       LineId line;
       line.id=-1;
       int shift=getUpperPickShift(); 
-      printf("UPPER BORDER:"+shift);
       if(shift==-1) return line;
       
       line.id=getMagicNumber();
@@ -170,7 +173,6 @@ class ChannelManager{
       LineId line;
       line.id=-1;
       int shift=getLowerPickShift(); 
-       printf("LOWER BORDER:"+shift);
      if(shift==-1) return line;
        
       line.id = getMagicNumber();
@@ -182,13 +184,13 @@ class ChannelManager{
    
    
    int getLowerPickShift(){
-      int i=1;
+      int i=5;
       double val1=0,val2=0,val3=0;
       
       while(i<50){
        val1=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i);
        val2=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+1);
-       val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+2);
+       val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+2);       
        if(val1>val2&&val3>val2){
          if(Low[i+1]<Bid||shared.isPriceNear(Bid,Low[i+1])){
             return i+1;

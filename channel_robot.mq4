@@ -2,20 +2,26 @@
 #include <ChannelManager.mqh>
 
 input double  MaxLossDollar=50;
-input int     MIN_WORKING_CHANNEL=20; 
+input int     MIN_WORKING_CHANNEL=30; 
 const double  SPREAD=2;
 //+------------------------------------------------------------------+
-//|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                |
+//|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
 //+------------------------------------------------------------------+
 //+------------------------------------------------------------------+
-//|   startOneHourDelay  is valid only for 1 hour period                           |
+//|   startOneHourDelay  is valid only for 1 hour period                          
 //+------------------------------------------------------------------+
 
 
 
-struct OrderParams{
-   double sl_pips,tp_pips;
+struct Order{
+   double sl_pips,tp_pips,openPrice;
    int type;
+};
+
+struct PendingOrders{
+   Order buy,sell;
+   bool areValid;
+   int channelId;
 };
   
 class Trend_robot { 
@@ -34,35 +40,34 @@ public:
  } 
    
  int currentChannelId;
+ PendingOrders pendingOrders;
  void onTick(){               
  
-   //if(OrdersTotal()==1){
-   //   setNonLoss();   
-   //}
-   //if(isOneHourDelayActive()){return;}                  
-    //if(OrdersTotal()==0){
-       //if(currentChannelId!=channelParams.id){               
-         //closeAllOrders();
-         //printf("Order was closed, because new channel created! New order can be opened after 1 hour");
-         //startDelayHour=Hour();         
-       //}
     if(OrdersTotal()==0){
-      if(!channelManager.existsValidChannel()){
-         return;
-         } 
+      if(channelManager.existsValidChannel()){
+         ChannelParams channelParams=channelManager.getChannelParams(); 
+         if(pendingOrders.channelId!=channelParams.id){           
+            updatePendingOrders(channelParams); 
+         }
+         checkToOpenOrder();         
+      } 
       else{            
-         ChannelParams channelParams=channelManager.getChannelParams();           
-         currentChannelId=channelParams.id;
-         double h=channelParams.height;
-         OrderParams orderParams;             
-         orderParams.sl_pips=h*0.5;
-         orderParams.tp_pips=h*1.0;
+         pendingOrders.areValid=false;
+         deletePendingOrderLines();
+         return;
+            
+               
+         //currentChannelId=channelParams.id;
+         //double h=channelParams.height;
+         //Order Order;             
+         //Order.sl_pips=h*0.5;
+         //Order.tp_pips=h*1.0;
          
           //if(shared.isPriceNear(channelParams.low)||shared.isPriceNear(channelParams.high)){
-          //  orderParams.type=OP_BUY;
-          //  openOrder(orderParams);
-          //  orderParams.type=OP_SELL;
-          //  openOrder(orderParams);
+          //  Order.type=OP_BUY;
+          //  openOrder(Order);
+          //  Order.type=OP_SELL;
+          //  openOrder(Order);
           //}            
       }
       
@@ -70,9 +75,68 @@ public:
             
  }
  
+ void updatePendingOrders(ChannelParams &channelParams){
+   deletePendingOrderLines();
+   pendingOrders.areValid=true;
+   pendingOrders.channelId=channelParams.id;
+   double halfChannelHeighPips=channelParams.height/2;
+   double channelCenter=halfChannelHeighPips/KOEF+channelParams.low;
+   
+   Order sell;
+   Order buy;
+   if(Bid<channelCenter){
+      sell.openPrice=channelParams.low-halfChannelHeighPips/KOEF-SPREAD/KOEF;
+      buy.openPrice=channelCenter+SPREAD/KOEF;    
+   }else{
+      buy.openPrice=channelParams.high+halfChannelHeighPips/KOEF+SPREAD/KOEF;
+      sell.openPrice=channelCenter-SPREAD/KOEF;  
+   }      
+   sell.sl_pips=halfChannelHeighPips+SPREAD;
+   sell.tp_pips=halfChannelHeighPips;
+   sell.type=OP_SELL;
+   
+   buy.sl_pips=halfChannelHeighPips+SPREAD; 
+   buy.tp_pips=halfChannelHeighPips;
+   buy.type=OP_BUY;
+   
+   pendingOrders.buy=buy;      
+   pendingOrders.sell=sell;
+   drawPendingOrderLines();
+ }
+ 
+ void drawPendingOrderLines(){
+      string name=DoubleToStr(pendingOrders.buy.openPrice);
+     ObjectCreate(0,name,OBJ_HLINE,0,0,pendingOrders.buy.openPrice);
+     ObjectSetInteger(0,name,OBJPROP_STYLE,STYLE_DASH);
+     ObjectSetInteger(0,name,OBJPROP_COLOR,clrYellow); 
+     name=DoubleToStr(pendingOrders.sell.openPrice);
+     ObjectCreate(0,name,OBJ_HLINE,0,0,pendingOrders.sell.openPrice);
+     ObjectSetInteger(0,name,OBJPROP_STYLE,STYLE_DASH);      
+     ObjectSetInteger(0,name,OBJPROP_COLOR,clrYellow);    
+
+ }
+ 
+ void checkToOpenOrder(){
+   if(shared.isPriceNear(Bid,pendingOrders.buy.openPrice)){
+      openOrder(pendingOrders.buy);
+      deletePendingOrderLines();
+   }else if(shared.isPriceNear(Bid,pendingOrders.sell.openPrice)){
+      openOrder(pendingOrders.sell);
+      deletePendingOrderLines();
+   } 
+ }
+ 
+ void deletePendingOrderLines(){
+    ObjectDelete(0,DoubleToStr(pendingOrders.buy.openPrice) );
+    ObjectDelete(0,DoubleToStr(pendingOrders.sell.openPrice) );
+ }
+ 
  void setNonLoss(){
     if(OrderSelect(0,SELECT_BY_POS)){      
-      OrderModify(OrderTicket(),OrderOpenPrice(),OrderOpenPrice(),OrderTakeProfit(),OrderExpiration(),Yellow);
+      bool resultOk=OrderModify(OrderTicket(),OrderOpenPrice(),OrderOpenPrice(),OrderTakeProfit(),OrderExpiration(),Yellow);
+      if(!resultOk){
+          printf("setNonLoss: Order change failed");
+      }
     }else{
       printf("BUG!! No active orders");
     }
@@ -137,7 +201,7 @@ public:
    
    }
 
- void openOrder(OrderParams &order){
+ void openOrder(Order &order){
  
    double sl=-1;
    double tp=-1;
