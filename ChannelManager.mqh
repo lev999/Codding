@@ -24,9 +24,10 @@ struct LineId{
    datetime timeShift;
 };
 
-struct ChannelLines{
+struct Channel{
    LineId upper;
    LineId lower;
+   bool exists;
 };
 
 class ChannelManager{
@@ -36,6 +37,8 @@ class ChannelManager{
  int currentBar;
  bool hasValidChannel;
  Shared2 *shared;
+  int INITIAL_SHIFT;
+  int MA_PERIOD;
 
  public:   
    ChannelManager(double MIN_WORKING_CHANNEL_local,Shared2* &shared_){
@@ -43,6 +46,10 @@ class ChannelManager{
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
       checkForNewChannel();
       isNewBar();
+      INITIAL_SHIFT=5;
+      MA_PERIOD=3;
+      lastValidChannel.exists=false;
+
    }
    
 
@@ -68,30 +75,33 @@ class ChannelManager{
     
        if(isNewBar()){
          checkForNewChannel();
-        }  
+        } 
+        if(lastValidChannel.exists){
+          hasValidChannel=true;
+        }else{
+          hasValidChannel=false;
+        }
     return hasValidChannel;
     }
     
  private:
  
- ChannelLines tmpChannel;
- ChannelLines lastValidChannel;
+ Channel tmpChannel;
+ Channel lastValidChannel;
  
    void checkForNewChannel(){
    
       tmpChannel.upper=getUpperLine();
       tmpChannel.lower=getLowerLine();
       
-      if(isChannelValid(tmpChannel)){
-          hasValidChannel=true; 
+      if(isNewChannelValid(tmpChannel)){
           drawNewChannel();
-          lastValidChannel=tmpChannel;       
-      }else{
-         hasValidChannel=false;      
+          lastValidChannel=tmpChannel;
+          lastValidChannel.exists=true;
       }
    }
       
-  bool isChannelValid(ChannelLines &channel){
+  bool isNewChannelValid(Channel &channel){
       
       if(channel.lower.id==-1 || channel.upper.id==-1){
          printf("channel is not valid because no one/two borders");
@@ -148,17 +158,24 @@ class ChannelManager{
     }
    
     
-   int getUpperPickShift(){
-      int i=1;
+    
+    int getUpperPickShift(){
+      int i=INITIAL_SHIFT;
       double val1=0,val2=0,val3=0;
       
       while(i<50){
-       val1=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i);
-       val2=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i+1);
-       val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_HIGH,i+2);
+       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i);
+       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+1);
+       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+2);
        if(val1<val2&&val3<val2){
-         if(High[i+1]>Bid||shared.isPriceNear(Bid,High[i+1])){
-            return i+1;
+         int finalpeak=0;
+         int peakShiftMA=iHighest(NULL,0,MODE_HIGH,3,i);
+         int peakShiftClosest=iHighest(NULL,0,MODE_HIGH,peakShiftMA+1,0);
+         
+         if(peakShiftClosest<peakShiftMA){finalpeak=peakShiftClosest;}else{finalpeak=peakShiftMA;}
+         
+         if(High[finalpeak]>Bid||shared.isPriceNear(Bid,High[finalpeak])){
+            return finalpeak;
          }         
        }
       i++;
@@ -182,18 +199,24 @@ class ChannelManager{
       return line;
    }
    
-   
    int getLowerPickShift(){
-      int i=5;
+      int i=INITIAL_SHIFT;
       double val1=0,val2=0,val3=0;
       
       while(i<50){
-       val1=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i);
-       val2=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+1);
-       val3=iMA(NULL,0,1,0,MODE_SMA,PRICE_LOW,i+2);       
+       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i);
+       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+1);
+       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+2);
+            
        if(val1>val2&&val3>val2){
-         if(Low[i+1]<Bid||shared.isPriceNear(Bid,Low[i+1])){
-            return i+1;
+         int finalpeak=0;
+         int peakShiftMA=iLowest(NULL,0,MODE_LOW,3,i);
+         int peakShiftClosest=iLowest(NULL,0,MODE_LOW,peakShiftMA+1,0);
+         
+         if(peakShiftClosest<peakShiftMA){finalpeak=peakShiftClosest;}else{finalpeak=peakShiftMA;}
+         
+         if(Low[finalpeak]<Bid||shared.isPriceNear(Bid,Low[finalpeak])){
+            return finalpeak;
          } 
        }
       i++;

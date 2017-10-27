@@ -2,8 +2,8 @@
 #include <ChannelManager.mqh>
 
 input double  MaxLossDollar=50;
-input int     MIN_WORKING_CHANNEL=30; 
-const double  SPREAD=2;
+input int     MIN_WORKING_CHANNEL=20; 
+const double  SPREAD=1;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
 //+------------------------------------------------------------------+
@@ -55,24 +55,8 @@ public:
          pendingOrders.areValid=false;
          deletePendingOrderLines();
          return;
-            
-               
-         //currentChannelId=channelParams.id;
-         //double h=channelParams.height;
-         //Order Order;             
-         //Order.sl_pips=h*0.5;
-         //Order.tp_pips=h*1.0;
-         
-          //if(shared.isPriceNear(channelParams.low)||shared.isPriceNear(channelParams.high)){
-          //  Order.type=OP_BUY;
-          //  openOrder(Order);
-          //  Order.type=OP_SELL;
-          //  openOrder(Order);
-          //}            
-      }
-      
-    }  
-            
+      }      
+    }              
  }
  
  void updatePendingOrders(ChannelParams &channelParams){
@@ -82,26 +66,38 @@ public:
    double halfChannelHeighPips=channelParams.height/2;
    double channelCenter=halfChannelHeighPips/KOEF+channelParams.low;
    
+   double spreadCorrection=getSpreadCorrection(halfChannelHeighPips);
    Order sell;
    Order buy;
    if(Bid<channelCenter){
-      sell.openPrice=channelParams.low-halfChannelHeighPips/KOEF-SPREAD/KOEF;
-      buy.openPrice=channelCenter+SPREAD/KOEF;    
+      sell.openPrice=channelParams.low-halfChannelHeighPips/KOEF;
+      buy.openPrice=channelCenter;         
    }else{
-      buy.openPrice=channelParams.high+halfChannelHeighPips/KOEF+SPREAD/KOEF;
-      sell.openPrice=channelCenter-SPREAD/KOEF;  
+      buy.openPrice=channelParams.high+halfChannelHeighPips/KOEF;
+      sell.openPrice=channelCenter;  
    }      
-   sell.sl_pips=halfChannelHeighPips+SPREAD;
-   sell.tp_pips=halfChannelHeighPips;
+   sell.sl_pips=halfChannelHeighPips+spreadCorrection;
+   sell.tp_pips=halfChannelHeighPips-spreadCorrection;
    sell.type=OP_SELL;
    
-   buy.sl_pips=halfChannelHeighPips+SPREAD; 
-   buy.tp_pips=halfChannelHeighPips;
+   buy.sl_pips=halfChannelHeighPips+spreadCorrection; 
+   buy.tp_pips=halfChannelHeighPips-spreadCorrection;
    buy.type=OP_BUY;
    
    pendingOrders.buy=buy;      
    pendingOrders.sell=sell;
    drawPendingOrderLines();
+ }
+ 
+ double getSpreadCorrection(double halfChannelHeighPips){
+ //--- Spread should be less than 5% of order TP/SL. Example: if spread=2 --> if Order TP>40 --> apply correction
+ 
+   if(halfChannelHeighPips*0.025>=SPREAD){
+      double correction=halfChannelHeighPips*0.05;
+      return correction;
+   }else{
+      return 0;
+   }
  }
  
  void drawPendingOrderLines(){
