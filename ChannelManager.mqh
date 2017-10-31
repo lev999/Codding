@@ -10,23 +10,21 @@
 #include <Shared2.mqh>
 
 struct ChannelParams{
-   double height;
-   double low;
-   double high;
+   double height,low,high,active;
    int id;
 
 };
 
-struct LineId{
+struct Line{
    int id;
    double price;
-   datetime time;
-   datetime timeShift;
+   datetime timeStart;
+   datetime timeEnd;
 };
 
 struct Channel{
-   LineId upper;
-   LineId lower;
+   Line upper;
+   Line lower;
    bool exists;
 };
 
@@ -46,7 +44,7 @@ class ChannelManager{
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
       checkForNewChannel();
       isNewBar();
-      INITIAL_SHIFT=5;
+      INITIAL_SHIFT=1;
       MA_PERIOD=3;
       lastValidChannel.exists=false;
 
@@ -60,7 +58,7 @@ class ChannelManager{
        params.high=lastValidChannel.upper.price;
        params.low=lastValidChannel.lower.price;
        params.id=lastValidChannel.lower.id+lastValidChannel.upper.id;       
-       
+       params.active=getFirstMarkedBorder(lastValidChannel);
       }else{
          printf("Error. Recieved request for params of invalid channel");
          params.height=-1;
@@ -89,6 +87,14 @@ class ChannelManager{
  Channel tmpChannel;
  Channel lastValidChannel;
  
+   double getFirstMarkedBorder(Channel &channel){
+      if(channel.lower.timeStart<channel.upper.timeStart){
+         return channel.lower.price;
+      }else{
+         return channel.upper.price;
+      }   
+   }
+   
    void checkForNewChannel(){
    
       tmpChannel.upper=getUpperLine();
@@ -109,8 +115,14 @@ class ChannelManager{
       }
       double realHeight=NormalizeDouble(MathAbs(channel.lower.price-channel.upper.price)*shared.getKoef(),2);   
       if(realHeight<MIN_WORKING_CHANNEL){
-         printf("channel is not valid because heigh: "+DoubleToStr(realHeight)+" < "+DoubleToStr(MIN_WORKING_CHANNEL));        
+         printf("channel is not valid because height: "+DoubleToStr(realHeight)+" < "+DoubleToStr(MIN_WORKING_CHANNEL));        
          return false;
+      }
+      
+      if(channel.lower.timeStart==channel.upper.timeStart){
+         printf("channel is not valid because upper and lower borders start at the same time");        
+         return false;
+     
       }   
       return true;
   }
@@ -119,7 +131,7 @@ class ChannelManager{
   void drawNewChannel(){
  
       if(shared.isPriceNear(tmpChannel.upper.price,lastValidChannel.upper.price)){
-          ObjectDelete(0,DoubleToStr(lastValidChannel.upper.id) );
+          ObjectDelete(0,DoubleToStr(lastValidChannel.upper.id));
       } 
       createObject(tmpChannel.upper);
  
@@ -132,8 +144,8 @@ class ChannelManager{
   
   
   
-  void createObject(const LineId& line){
-     ObjectCreate(DoubleToStr(line.id), OBJ_TREND, 0,line.timeShift , line.price, line.time, line.price);
+  void createObject(const Line& line){
+     ObjectCreate(DoubleToStr(line.id), OBJ_TREND, 0,line.timeStart, line.price, line.timeEnd, line.price);
      ObjectSet(DoubleToStr(line.id), OBJPROP_RAY, false); 
   }
  
@@ -143,87 +155,110 @@ class ChannelManager{
    //|                 UPPER BORDER                                                 |
    //+------------------------------------------------------------------+
    
-   LineId getUpperLine(){      
-      LineId line;
+   Line getUpperLine(){      
+      Line line;
       line.id=-1;
       int shift=getUpperPickShift(); 
       if(shift==-1) return line;
       
       line.id=getMagicNumber();
       line.price=High[shift];     
-      line.timeShift=Time[shift]; 
-      line.time=Time[0];
+      line.timeStart=Time[shift]; 
+      line.timeEnd=Time[0];
   
+      if(shared.isPriceNear(lastValidChannel.upper.price,line.price)){
+          line.timeStart=lastValidChannel.upper.timeStart;
+      } 
       return line;
     }
    
-    
-    
     int getUpperPickShift(){
+      
+      int peakShiftMA=getHighPickShiftMA(Bid);
+      if(peakShiftMA==-1){return peakShiftMA;}      
+      int peakShiftClosest=iHighest(NULL,0,MODE_HIGH,peakShiftMA+MA_PERIOD+1,0);   
+      int finalpeakShift;
+      if(High[peakShiftClosest]>High[peakShiftMA]){
+         finalpeakShift=getHighPickShiftMA(High[peakShiftClosest]);
+      }else{
+         finalpeakShift=peakShiftMA;
+      }
+         
+      return finalpeakShift;
+   } 
+   
+   int getHighPickShiftMA(double initialPrice){
       int i=INITIAL_SHIFT;
       double val1=0,val2=0,val3=0;
-      
       while(i<50){
        val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i);
        val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+1);
        val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+2);
        if(val1<val2&&val3<val2){
-         int finalpeak=0;
-         int peakShiftMA=iHighest(NULL,0,MODE_HIGH,3,i);
-         int peakShiftClosest=iHighest(NULL,0,MODE_HIGH,peakShiftMA+1,0);
-         
-         if(peakShiftClosest<peakShiftMA){finalpeak=peakShiftClosest;}else{finalpeak=peakShiftMA;}
-         
-         if(High[finalpeak]>Bid||shared.isPriceNear(Bid,High[finalpeak])){
-            return finalpeak;
+         int tmpPeakShiftMA=iHighest(NULL,0,MODE_HIGH,3,i);         
+         if(High[tmpPeakShiftMA]>initialPrice||shared.isPriceNear(initialPrice,High[tmpPeakShiftMA])){
+           return tmpPeakShiftMA;    
          }         
        }
       i++;
       }
       return -1;
-   } 
+   }
+   
    //+------------------------------------------------------------------+
    //|                 LOWER BORDER                                                 |
    //+------------------------------------------------------------------+
     
-   LineId getLowerLine(){ 
-      LineId line;
+   Line getLowerLine(){ 
+      Line line;
       line.id=-1;
       int shift=getLowerPickShift(); 
      if(shift==-1) return line;
        
       line.id = getMagicNumber();
       line.price = Low[shift];
-      line.timeShift=Time[shift];   
-      line.time = Time[0];
+      line.timeStart=Time[shift];   
+      line.timeEnd = Time[0];
+      
+      if(shared.isPriceNear(lastValidChannel.lower.price,line.price)){
+          line.timeStart=lastValidChannel.lower.timeStart;
+      } 
+
       return line;
    }
    
-   int getLowerPickShift(){
+   int getLowerPickShift(){      
+      int peakShiftMA=getLowPeakShift(Bid);
+      if(peakShiftMA==-1){return peakShiftMA;}      
+
+      int peakShiftClosest=iLowest(NULL,0,MODE_LOW,peakShiftMA+MA_PERIOD+1,0);   
+      int finalpeakShift;
+      if(Low[peakShiftClosest]<Low[peakShiftMA]){
+         finalpeakShift=getLowPeakShift(Low[peakShiftClosest]);
+      }else{
+         finalpeakShift=peakShiftMA;
+      }
+      return finalpeakShift;
+   }   
+  
+  int getLowPeakShift(double initialPrice){
       int i=INITIAL_SHIFT;
       double val1=0,val2=0,val3=0;
-      
       while(i<50){
        val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i);
        val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+1);
        val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+2);
             
        if(val1>val2&&val3>val2){
-         int finalpeak=0;
-         int peakShiftMA=iLowest(NULL,0,MODE_LOW,3,i);
-         int peakShiftClosest=iLowest(NULL,0,MODE_LOW,peakShiftMA+1,0);
-         
-         if(peakShiftClosest<peakShiftMA){finalpeak=peakShiftClosest;}else{finalpeak=peakShiftMA;}
-         
-         if(Low[finalpeak]<Bid||shared.isPriceNear(Bid,Low[finalpeak])){
-            return finalpeak;
+         int tmpPeakShiftMA=iLowest(NULL,0,MODE_LOW,3,i);
+         if(Low[tmpPeakShiftMA]<initialPrice||shared.isPriceNear(initialPrice,Low[tmpPeakShiftMA])){
+           return tmpPeakShiftMA;           
          } 
        }
       i++;
       }
       return -1;
-   }   
-  
+  }
    
   bool isNewBar(){
       int bar=iBars(NULL,PERIOD_CURRENT);

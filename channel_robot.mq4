@@ -46,16 +46,20 @@ public:
     if(OrdersTotal()==0){
       if(channelManager.existsValidChannel()){
          ChannelParams channelParams=channelManager.getChannelParams(); 
-         if(pendingOrders.channelId!=channelParams.id){           
+         if(pendingOrders.channelId!=channelParams.id&&shared.isPriceNear(channelParams.active)){           
             updatePendingOrders(channelParams); 
          }
-         checkToOpenOrder();         
+         if(pendingOrders.areValid){ 
+            checkToOpenOrder(); 
+         }                
       } 
       else{            
          pendingOrders.areValid=false;
          deletePendingOrderLines();
          return;
       }      
+    }else{
+       pendingOrders.areValid=false;
     }              
  }
  
@@ -104,15 +108,16 @@ public:
       string name=DoubleToStr(pendingOrders.buy.openPrice);
      ObjectCreate(0,name,OBJ_HLINE,0,0,pendingOrders.buy.openPrice);
      ObjectSetInteger(0,name,OBJPROP_STYLE,STYLE_DASH);
-     ObjectSetInteger(0,name,OBJPROP_COLOR,clrYellow); 
+     ObjectSetInteger(0,name,OBJPROP_COLOR,clrRosyBrown); 
      name=DoubleToStr(pendingOrders.sell.openPrice);
      ObjectCreate(0,name,OBJ_HLINE,0,0,pendingOrders.sell.openPrice);
      ObjectSetInteger(0,name,OBJPROP_STYLE,STYLE_DASH);      
-     ObjectSetInteger(0,name,OBJPROP_COLOR,clrYellow);    
+     ObjectSetInteger(0,name,OBJPROP_COLOR,clrRosyBrown);    
 
  }
  
  void checkToOpenOrder(){
+ 
    if(shared.isPriceNear(Bid,pendingOrders.buy.openPrice)){
       openOrder(pendingOrders.buy);
       deletePendingOrderLines();
