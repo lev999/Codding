@@ -36,7 +36,8 @@ class ResistanceLevelManager{
    
    bool isBidCloseToLevel(){
       if(isNewBar()){
-            updatePeaks();      
+            updateLowerPeak(); 
+            updateUpperPeak();                 
          }         
       return isPriceCloseToOneOfLevels();
    }
@@ -55,18 +56,22 @@ class ResistanceLevelManager{
          return -1;      
       }            
    }
-   void removeActiveLevel(){
-      
-      
-      bool answer=ObjectDelete(0,DoubleToStr(lowerPeak.price));
-      printf("removed active level2 "+DoubleToStr(lowerPeak.price+1)+", "+answer);
-      answer = ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
-      printf("removed active level2 "+DoubleToStr(lowerPeak.price+1)+", "+answer);
-      lowerPeak.price=-1;
+   void removeActiveLevel(){        
+      ObjectDelete(0,DoubleToStr(activePeak.price));
+      ObjectDelete(0,DoubleToStr(activePeak.price+1));
+      if(activePeak.price==lowerPeak.price){
+         lowerPeak.price=-1;      
+      }else{
+         upperPeak.price=-1;
+      }
+      activePeak.price=-1;
    }
+   
  private:
- 
-  void updatePeaks(){  
+//+------------------------------------------------------------------+
+//|  LOWER PEAK                                                                |
+//+------------------------------------------------------------------+
+  void updateLowerPeak(){  
     int peakShift=getLowestPeakShift(MA_PERIOD);  
     while(true){
        if(peakShift!=-1){
@@ -99,46 +104,11 @@ class ResistanceLevelManager{
       createObjectSymbol(lowerPeak);
       createObjectLine(lowerPeak);
       
-      printf("created new level: "+lowerPeak.price);
+      printf("created new lower level: "+lowerPeak.price);
       
    }
   }
   
-  void createObjectLine(const Peak& line){
-      if(!ObjectCreate(0,DoubleToStr(line.price+1),OBJ_HLINE,0,0,line.price)){       
-            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
-            return; 
-        }
-        else{        
-            int width=3;//size
-            int chart_ID=0;
-            string name=DoubleToStr(line.price);            
-            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,ANCHOR_TOP); 
-         //--- set line color 
-            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrGold); 
-         //--- set line display style 
-            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_DASH); 
-         //--- set line width 
-            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,1); 
-           } 
-  }
-  
-  void createObjectSymbol(const Peak& line){
-      if(!ObjectCreate(0,DoubleToStr(line.price),OBJ_ARROW_UP,0,line.time,line.price)){ 
-            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
-            return; 
-        }
-        else{        
-            int width=3;//size
-            int chart_ID=0;
-            string name=DoubleToStr(line.price);            
-            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,ANCHOR_TOP); 
-            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrRed);
-            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_SOLID); 
-            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,width);         
-        } 
-  }
- 
   int getLowestPeakShift(int shift){      
       int peakShiftMA=getLowMAPeakShift(shift);
       if(peakShiftMA==-1){return peakShiftMA;}      
@@ -171,12 +141,130 @@ class ResistanceLevelManager{
       }
       return -1;
   }
+//+------------------------------------------------------------------+
+//|  Upper PEAK                                                      |
+//+------------------------------------------------------------------+
+
+  void updateUpperPeak(){  
+    int peakShift=getHighestPeakShift(MA_PERIOD);  
+    while(true){
+       if(peakShift!=-1){
+           double lowestPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,peakShift+1,1));            
+           if((Bid-lowestPrice)*shared.getKoef()>MIN_WORKING_CHANNEL){
+               createUpperPeak(peakShift);
+               return; 
+           }else{
+               int newPeakShift=getHighestPeakShift(peakShift); 
+               if(newPeakShift==peakShift){
+                  return;
+               }else{
+                  peakShift=newPeakShift;               
+               }               
+           }           
+       }else {return;}       
+     }    
+  }
    
+  Peak upperPeak; 
+  void createUpperPeak(int peakShift){     
+   double price=iHigh(NULL,0,peakShift); 
+   if(upperPeak.price!=price){
+      ObjectDelete(0,DoubleToStr(upperPeak.price));
+      ObjectDelete(0,DoubleToStr(upperPeak.price+1));
+      
+      upperPeak.price=price;
+      upperPeak.time=iTime(NULL,0,peakShift);
+      createObjectSymbol(upperPeak);
+      createObjectLine(upperPeak);      
+      printf("created new upper level: "+upperPeak.price);      
+   }
+  }
+  
+  int getHighestPeakShift(int shift){      
+      int peakShiftMA=getHighMAPeakShift(shift);
+      if(peakShiftMA==-1){return peakShiftMA;}      
+
+      int peakShiftClosest=iHighest(NULL,0,MODE_HIGH,(peakShiftMA-shift),shift);   
+      int finalpeakShift;
+      if(High[peakShiftClosest]>High[peakShiftMA]){
+         finalpeakShift=peakShiftClosest;
+      }else{
+         finalpeakShift=peakShiftMA;
+      }
+      return finalpeakShift;
+   }   
    
+    int getHighMAPeakShift(int shift){
+      int i=shift;
+      double val1=0,val2=0,val3=0,initialPrice=Bid;
+      while(i<50){
+       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i);
+       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+1);
+       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+2);
+            
+       if(val1<val2&&val3<val2){
+         int tmpPeakShiftMA=iHighest(NULL,0,MODE_HIGH,3,i);
+         if(High[tmpPeakShiftMA]>initialPrice||shared.isPriceNear(initialPrice,High[tmpPeakShiftMA])){
+           return tmpPeakShiftMA;           
+         } 
+       }
+      i++;
+      }
+      return -1;
+  }
+
+//------------------------------------------
+   
+  void createObjectLine(const Peak& line){
+      string name=DoubleToStr(line.price+1);  
+      if(!ObjectCreate(0,name,OBJ_HLINE,0,0,line.price)){       
+            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
+            return; 
+        }
+        else{        
+            int chart_ID=0;                      
+            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,ANCHOR_TOP); 
+         //--- set line color 
+            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrGold); 
+         //--- set line display style 
+            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_DASH); 
+         //--- set line width 
+            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,1); 
+           } 
+  }
+  
+  void createObjectSymbol(const Peak& line){
+      string name=DoubleToStr(line.price);
+      ENUM_OBJECT arrow;
+      long anchor;
+      if(Bid<line.price){
+         arrow=OBJ_ARROW_DOWN;
+         anchor=ANCHOR_BOTTOM;
+      }else{
+         arrow=OBJ_ARROW_UP;
+         anchor=ANCHOR_TOP; 
+      }
+     
+      if(!ObjectCreate(0,name,arrow,0,line.time,line.price)){ 
+            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
+            return; 
+        }
+        else{        
+            int chart_ID=0;                        
+            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,anchor); 
+            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrRed);
+            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_SOLID); 
+            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,3);         
+        } 
+  }   
    Peak activePeak;
    bool isPriceCloseToOneOfLevels(){
       if(lowerPeak.price!=-1&&shared.isPriceNear(lowerPeak.price)){
          activePeak=lowerPeak;
+         return true;
+      }
+      else if(upperPeak.price!=-1&&shared.isPriceNear(upperPeak.price)){
+         activePeak=upperPeak;
          return true;
       }
       else{
