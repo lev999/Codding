@@ -10,8 +10,7 @@
 #include <Shared2.mqh>
 
 
-struct Level{
-   int id;
+struct Peak{
    double price;
    datetime time;
 };
@@ -32,6 +31,7 @@ class ResistanceLevelManager{
       isNewBar();
       INITIAL_SHIFT=1;
       MA_PERIOD=3;
+      lowerPeak.price=-1;
    }
    
    bool isBidCloseToLevel(){
@@ -41,35 +41,154 @@ class ResistanceLevelManager{
       return isPriceCloseToOneOfLevels();
    }
       
-   double getSimetricLevelPrice(){   
-      double targetPrice=getSimetricLevelPrice(activeLevel);
-      return targetPrice;
+   double getSimetricLevelPrice(){
+      if(activePeak.price!=-1){
+         double apositePeakPrice;
+         int shift=iBarShift(NULL,0,activePeak.time,true); 
+         if(activePeak.price==lowerPeak.price){                       
+            apositePeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,shift+1,1));
+         }else{
+             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_HIGH,shift+1,1));          
+         }
+         return apositePeakPrice;
+      }else{
+         return -1;      
+      }            
    }
-  
-  
-
-    
+   void removeActiveLevel(){
+      
+      
+      bool answer=ObjectDelete(0,DoubleToStr(lowerPeak.price));
+      printf("removed active level2 "+DoubleToStr(lowerPeak.price+1)+", "+answer);
+      answer = ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
+      printf("removed active level2 "+DoubleToStr(lowerPeak.price+1)+", "+answer);
+      lowerPeak.price=-1;
+   }
  private:
  
-    void updatePeaks(){
-    
-    }
+  void updatePeaks(){  
+    int peakShift=getLowestPeakShift(MA_PERIOD);  
+    while(true){
+       if(peakShift!=-1){
+           double highestPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,peakShift+1,1));            
+           if((highestPrice-Bid)*shared.getKoef()>MIN_WORKING_CHANNEL){
+               createLowerPeak(peakShift);
+               return; 
+           }else{
+               int newPeakShift=getLowestPeakShift(peakShift); 
+               if(newPeakShift==peakShift){
+                  return;
+               }else{
+               peakShift=newPeakShift;               
+               }
+               
+           }           
+       }else {return;}       
+     }    
+  }
    
-   Level activeLevel;
-   bool isPriceCloseToOneOfLevels(){
-      return true;
+  Peak lowerPeak; 
+  void createLowerPeak(int peakShift){     
+   double price=iLow(NULL,0,peakShift);   
+   if(lowerPeak.price!=price){
+      ObjectDelete(0,DoubleToStr(lowerPeak.price));
+      ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
+      
+      lowerPeak.price=price;
+      lowerPeak.time=iTime(NULL,0,peakShift);
+      createObjectSymbol(lowerPeak);
+      createObjectLine(lowerPeak);
+      
+      printf("created new level: "+lowerPeak.price);
+      
    }
-   
-   
-   double getSimetricLevelPrice(Level &level){
-   
-      return 0;
-   }
+  }
+  
+  void createObjectLine(const Peak& line){
+      if(!ObjectCreate(0,DoubleToStr(line.price+1),OBJ_HLINE,0,0,line.price)){       
+            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
+            return; 
+        }
+        else{        
+            int width=3;//size
+            int chart_ID=0;
+            string name=DoubleToStr(line.price);            
+            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,ANCHOR_TOP); 
+         //--- set line color 
+            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrGold); 
+         //--- set line display style 
+            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_DASH); 
+         //--- set line width 
+            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,1); 
+           } 
+  }
+  
+  void createObjectSymbol(const Peak& line){
+      if(!ObjectCreate(0,DoubleToStr(line.price),OBJ_ARROW_UP,0,line.time,line.price)){ 
+            Print(__FUNCTION__,   ": failed to create \"Arrow Up\" sign! Error code = ",GetLastError()); 
+            return; 
+        }
+        else{        
+            int width=3;//size
+            int chart_ID=0;
+            string name=DoubleToStr(line.price);            
+            ObjectSetInteger(chart_ID,name,OBJPROP_ANCHOR,ANCHOR_TOP); 
+            ObjectSetInteger(chart_ID,name,OBJPROP_COLOR,clrRed);
+            ObjectSetInteger(chart_ID,name,OBJPROP_STYLE,STYLE_SOLID); 
+            ObjectSetInteger(chart_ID,name,OBJPROP_WIDTH,width);         
+        } 
+  }
+ 
+  int getLowestPeakShift(int shift){      
+      int peakShiftMA=getLowMAPeakShift(shift);
+      if(peakShiftMA==-1){return peakShiftMA;}      
 
-  int getMagicNumber(){
+      int peakShiftClosest=iLowest(NULL,0,MODE_LOW,(peakShiftMA-shift),shift);   
+      int finalpeakShift;
+      if(Low[peakShiftClosest]<Low[peakShiftMA]){
+         finalpeakShift=peakShiftClosest;
+      }else{
+         finalpeakShift=peakShiftMA;
+      }
+      return finalpeakShift;
+   }   
+   
+    int getLowMAPeakShift(int shift){
+      int i=shift;
+      double val1=0,val2=0,val3=0,initialPrice=Bid;
+      while(i<50){
+       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i);
+       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+1);
+       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+2);
+            
+       if(val1>val2&&val3>val2){
+         int tmpPeakShiftMA=iLowest(NULL,0,MODE_LOW,3,i);
+         if(Low[tmpPeakShiftMA]<initialPrice||shared.isPriceNear(initialPrice,Low[tmpPeakShiftMA])){
+           return tmpPeakShiftMA;           
+         } 
+       }
+      i++;
+      }
+      return -1;
+  }
+   
+   
+   Peak activePeak;
+   bool isPriceCloseToOneOfLevels(){
+      if(lowerPeak.price!=-1&&shared.isPriceNear(lowerPeak.price)){
+         activePeak=lowerPeak;
+         return true;
+      }
+      else{
+         return false;
+      }      
+   }
+   
+   int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
       return num;   
    }
+   
    bool isNewBar(){
       int bar=iBars(NULL,PERIOD_CURRENT);
       if(currentBar!=bar){
