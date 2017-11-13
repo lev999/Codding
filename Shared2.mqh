@@ -33,10 +33,10 @@ class Shared2{
   }
  public:
    
-   Shared2(double spread,double max_loss_dollars){         
+   Shared2(double max_loss_dollars){         
       isNewBar_name="isNewBar";
       setKoef();
-      SPREAD=spread;
+      SPREAD=(Ask-Bid)*KOEF;
       MAX_LOSS_DOLLARS=max_loss_dollars;
    }
    
@@ -70,26 +70,16 @@ class Shared2{
       return KOEF;
   }
 
-   bool isNewBar(){
-   
-         if( GlobalVariableGet(isNewBar_name)==0){
-            return false;
-         }else{
-            return true;
-         }
+   bool isNewBar(){   
+      if( GlobalVariableGet(isNewBar_name)==0){
+         return false;
+      }else{
+         return true;
+      }
    }
       
- double getLot(double stopLossValue,int orderType ){
-      double openPrice=0;
-      if(orderType==OP_BUY){
-         openPrice=Ask;
-      }else{
-         openPrice=Bid;
-      }
-      
-      double pips=MathAbs(stopLossValue-openPrice)*KOEF;
-      double lot=NormalizeDouble(MAX_LOSS_DOLLARS/(10*pips), 2);
-      
+ double getLot(double H_pips ){      
+      double lot=NormalizeDouble(MAX_LOSS_DOLLARS/(H_pips*KOEF*10), 4);
       if(lot<0.01){
          printf("Error: lot <0.01");
          return 0;
