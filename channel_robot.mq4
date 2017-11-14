@@ -90,13 +90,11 @@ public:
          double currentTime=TimeCurrent();
          double orderAgeHours=(currentTime-orderTime)/60/60;
          if(orderAgeHours>=ORDER_TIMEOUT){
-            printf("Order closing by timeOut");
-            if(shared.isPriceNear(Bid,OrderOpenPrice())||shared.isPriceNear(Ask,OrderOpenPrice())){
-               closeOrder();
-            }else{
-               setNonLoss();
-               currentOrderTicket=-1;
-            }            
+            printf("Order closing/nonLoss by timeOut");
+            if(!setNonLoss()){
+                  closeOrder();
+               }
+            currentOrderTicket=-1;        
          }      
       }   
    }   
@@ -124,10 +122,13 @@ public:
    { 
       Print("Order set to non_loss successfully"); 
       return true;      
-   }else{
-      Print("Order non_loss failed with error #",GetLastError());  
-      return false;        
-   } 
+   }else if(OrderModify(OrderTicket(),OrderOpenPrice(),OrderOpenPrice(),OrderTakeProfit(),0)){
+       Print("Order set to non_loss successfully"); 
+      return true;        
+   } else{
+      Print("Order non_loss failed with error #",GetLastError()); 
+    return false;       
+   }
  }
  
 };

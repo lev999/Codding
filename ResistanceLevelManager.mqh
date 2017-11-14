@@ -48,9 +48,9 @@ class ResistanceLevelManager{
          double apositePeakPrice;
          int shift=iBarShift(NULL,0,activePeak.time,true); 
          if(activePeak.price==lowerPeak.price){                       
-            apositePeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,shift+1,1));
+            apositePeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,shift+10,1));//10 is here trend time life estimation
          }else{
-             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,shift+1,1));          
+             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,shift+10,1)); //10 is here trend time life estimation         
          }
          return apositePeakPrice;
       }else{
