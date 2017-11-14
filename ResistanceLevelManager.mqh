@@ -38,7 +38,8 @@ class ResistanceLevelManager{
       if(isNewBar()){
             updateLowerPeak(); 
             updateUpperPeak();                 
-         }         
+         }
+       removeOutDatedLevels();           
       return isPriceCloseToOneOfLevels();
    }
       
@@ -49,25 +50,41 @@ class ResistanceLevelManager{
          if(activePeak.price==lowerPeak.price){                       
             apositePeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,shift+1,1));
          }else{
-             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_HIGH,shift+1,1));          
+             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,shift+1,1));          
          }
          return apositePeakPrice;
       }else{
          return -1;      
       }            
    }
-   void removeActiveLevel(){        
-      ObjectDelete(0,DoubleToStr(activePeak.price));
-      ObjectDelete(0,DoubleToStr(activePeak.price+1));
-      if(activePeak.price==lowerPeak.price){
-         lowerPeak.price=-1;      
-      }else{
-         upperPeak.price=-1;
-      }
-      activePeak.price=-1;
+   
+   void removeAllLevels(){        
+     removePeak(upperPeak);
+     removePeak(lowerPeak);
+     removePeak(activePeak);     
    }
    
  private:
+ 
+ void removeOutDatedLevels(){   
+   double closeDelta=(0.25*MIN_WORKING_CHANNEL/shared.getKoef());
+   if(lowerPeak.price!=-1&&Bid<(lowerPeak.price-closeDelta)){
+      printf("lowerPeak was removed because price was lower than peak-delta "+(lowerPeak.price-closeDelta));
+      removePeak(lowerPeak);         
+   }else
+   if(upperPeak.price!=-1&&Bid>(upperPeak.price+closeDelta)){
+      printf("upperPeak was removed because price was higher than peak+delta "+(upperPeak.price+closeDelta));
+      removePeak(upperPeak);         
+   } 
+ }
+ 
+ void removePeak(Peak& peak ){
+      ObjectDelete(0,DoubleToStr(peak.price));
+      ObjectDelete(0,DoubleToStr(peak.price+1));
+      peak.price=-1;
+ }
+ 
+ 
 //+------------------------------------------------------------------+
 //|  LOWER PEAK                                                                |
 //+------------------------------------------------------------------+

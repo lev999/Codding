@@ -88,6 +88,11 @@ class Shared2{
       }   
    }
    
+   double getSpread(){
+      return SPREAD;
+   
+   }
+   
  void alertResult(int ticket,double tp, double sl,double volume){      
         if(ticket<0) 
       { 

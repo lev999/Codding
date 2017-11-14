@@ -38,7 +38,6 @@ public:
       KOEF=shared.getKoef();   
       currentOrderTicket=-1; 
       levelManager= new ResistanceLevelManager(MIN_WORKING_CHANNEL,shared);
-
  } 
    
  void onTick(){               
@@ -47,11 +46,10 @@ public:
       if(levelManager.isBidCloseToLevel()){
          double targetPrice=levelManager.getSimetricLevelPrice();
          openOrder(targetPrice);
-         levelManager.removeActiveLevel();
+         levelManager.removeAllLevels();
       }
     }else{
-     
-     // checkOrderTimeOut();
+      checkOrderTimeOut();
     }      
  }
  
@@ -120,13 +118,15 @@ public:
    } 
  }
  
- void setNonLoss(){   
-   int ticket=OrderModify(OrderTicket(),OrderOpenPrice(),OrderOpenPrice(),OrderTakeProfit(),0);           
-   if(ticket<0) 
+ bool setNonLoss(){     
+
+   if(OrderModify(OrderTicket(),OrderOpenPrice(),OrderStopLoss(),OrderOpenPrice(),0)) 
    { 
-      Print("Order non_loss failed with error #",GetLastError());          
-   }else{
       Print("Order set to non_loss successfully"); 
+      return true;      
+   }else{
+      Print("Order non_loss failed with error #",GetLastError());  
+      return false;        
    } 
  }
  
