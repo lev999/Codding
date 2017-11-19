@@ -8,14 +8,10 @@
 #property version   "1.00"
 #property strict
 
-struct Pattern{
-   double sl;
-   double tp;
-   double history_depth;
-   double sl_tp_limit;
-   double orderTimeOut; 
-   double blockTrading; 
-   double spread; 
+struct TPSL{
+   double SL;
+   double TP;
+   
 };
 
 class Shared2{

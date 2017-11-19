@@ -17,7 +17,7 @@ struct Peak{
 
 class ResistanceLevelManager{
  
- double MIN_WORKING_CHANNEL;
+ double MIN_WORKING_CHANNEL,WORK_PERIOD;
  bool hasValidChannel;
  Shared2 *shared;
   int INITIAL_SHIFT;
@@ -25,12 +25,14 @@ class ResistanceLevelManager{
  int currentBar;
  
  public:   
-   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,Shared2* &shared_){
+   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,double WORK_PERIOD_local,Shared2* &shared_){
       shared=shared_;
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
+      WORK_PERIOD=WORK_PERIOD_local;
       isNewBar();
       INITIAL_SHIFT=1;
       MA_PERIOD=3;
+      
       lowerPeak.price=-1;
    }
    
@@ -143,7 +145,7 @@ class ResistanceLevelManager{
     int getLowMAPeakShift(int shift){
       int i=shift;
       double val1=0,val2=0,val3=0,initialPrice=Bid;
-      while(i<50){
+      while(i<WORK_PERIOD){
        val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i);
        val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+1);
        val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+2);
@@ -214,7 +216,7 @@ class ResistanceLevelManager{
     int getHighMAPeakShift(int shift){
       int i=shift;
       double val1=0,val2=0,val3=0,initialPrice=Bid;
-      while(i<50){
+      while(i<WORK_PERIOD){
        val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i);
        val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+1);
        val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+2);

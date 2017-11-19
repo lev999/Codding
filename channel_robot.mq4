@@ -4,8 +4,7 @@
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
 
-
-const int ORDER_TIMEOUT=10;
+const double WORK_PERIOD=50;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
 //+------------------------------------------------------------------+
@@ -37,7 +36,7 @@ public:
       shared = new Shared2(MAX_LOSS_DOLLARS); 
       KOEF=shared.getKoef();   
       currentOrderTicket=-1; 
-      levelManager= new ResistanceLevelManager(MIN_WORKING_CHANNEL,shared);
+      levelManager= new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,shared);
  } 
    
  void onTick(){               
@@ -89,7 +88,7 @@ public:
          double orderTime = OrderOpenTime();
          double currentTime=TimeCurrent();
          double orderAgeHours=(currentTime-orderTime)/60/60;
-         if(orderAgeHours>=ORDER_TIMEOUT){
+         if(orderAgeHours>=WORK_PERIOD){
             printf("Order closing/nonLoss by timeOut");
             if(!setNonLoss()){
                   closeOrder();
