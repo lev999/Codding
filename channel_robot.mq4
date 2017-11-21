@@ -3,6 +3,8 @@
 
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
+input double PATTERN_SL=0.9;
+input double PATTERN_TP=1;
 
 const double WORK_PERIOD=50;
 //+------------------------------------------------------------------+
@@ -58,8 +60,8 @@ public:
    double tp=-1;
    int orderType;
    color    colorOrder; 
-   double pattern_sl=1;
-   double pattern_tp=1;   
+   double pattern_sl=PATTERN_SL;
+   double pattern_tp=PATTERN_TP;   
    double H_pips=MathAbs(Bid-targetPrice);
    double openPrice;
    if(targetPrice>Bid){
@@ -88,7 +90,7 @@ public:
          double orderTime = OrderOpenTime();
          double currentTime=TimeCurrent();
          double orderAgeHours=(currentTime-orderTime)/60/60;
-         if(orderAgeHours>=WORK_PERIOD){
+         if(orderAgeHours>=WORK_PERIOD*2){
             printf("Order closing/nonLoss by timeOut");
             if(!setNonLoss()){
                   closeOrder();
