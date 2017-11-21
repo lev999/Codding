@@ -71,11 +71,9 @@ class ResistanceLevelManager{
  void removeOutDatedLevels(){   
    double closeDelta=(0.25*MIN_WORKING_CHANNEL/shared.getKoef());
    if(lowerPeak.price!=-1&&Bid<(lowerPeak.price-closeDelta)){
-      printf("lowerPeak was removed because price was lower than peak-delta "+(lowerPeak.price-closeDelta));
-      removePeak(lowerPeak);         
+       removePeak(lowerPeak);         
    }else
    if(upperPeak.price!=-1&&Bid>(upperPeak.price+closeDelta)){
-      printf("upperPeak was removed because price was higher than peak+delta "+(upperPeak.price+closeDelta));
       removePeak(upperPeak);         
    } 
  }
@@ -123,7 +121,6 @@ class ResistanceLevelManager{
       createObjectSymbol(lowerPeak);
       createObjectLine(lowerPeak);
       
-      printf("created new lower level: "+lowerPeak.price);
       
    }
   }
@@ -194,8 +191,7 @@ class ResistanceLevelManager{
       upperPeak.price=price;
       upperPeak.time=iTime(NULL,0,peakShift);
       createObjectSymbol(upperPeak);
-      createObjectLine(upperPeak);      
-      printf("created new upper level: "+upperPeak.price);      
+      createObjectLine(upperPeak);         
    }
   }
   
