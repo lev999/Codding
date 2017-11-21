@@ -14,17 +14,9 @@ const double WORK_PERIOD=50;
 //|   startOneHourDelay  is valid only for 1 hour period                          
 //+------------------------------------------------------------------+
 
-
-
-struct Order{
-   double sl_pips,tp_pips,openPrice;
-   int type;
-};
-
-struct PendingOrders{
-   Order buy,sell;
-   bool areValid;
-   int channelId;
+struct TargetLevel{   
+   double targetPrice;
+   double initBidPrice;
 };
   
 class Channel_robot { 
@@ -32,6 +24,7 @@ class Channel_robot {
    int currentOrderTicket;
    Shared2 *shared;
    ResistanceLevelManager *levelManager;
+   TargetLevel targetLevel;
 public:  
  Channel_robot() {
       
@@ -43,15 +36,72 @@ public:
    
  void onTick(){               
  
-    if(OrdersTotal()==0){
-      if(levelManager.isBidCloseToLevel()){
-         double targetPrice=levelManager.getSimetricLevelPrice();
-         openOrder(targetPrice);
-         levelManager.removeAllLevels();
+    if(OrdersTotal()==0){    
+      if(!isTradingBlocked()){
+         if(levelManager.isBidCloseToLevel()){
+            double targetPrice=levelManager.getSimetricLevelPrice();
+            targetLevel.targetPrice=targetPrice;
+            targetLevel.initBidPrice=Bid;
+            openOrder(targetPrice);
+            levelManager.removeAllLevels();
+         }
       }
-    }else{
-      checkOrderTimeOut();
-    }      
+    }else if(wasTimeOut()){
+         printf("Order closing/nonLoss by timeOut");
+         if(!setNonLoss()){
+               closeOrder();
+         }
+      }
+          
+ }
+ 
+ 
+ bool isTradingBlocked(){
+   
+   if(currentOrderTicket==-1){
+      printf("1");
+    return false;
+   }
+   
+   if(wasTimeOut()){            
+       printf("2");
+     return false;
+   }
+   
+   if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
+         
+         int openShift=iBarShift(NULL,0,OrderOpenTime(),true); 
+                  
+         double highestPeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,openShift,0));
+         double lowestPeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,openShift,0)); 
+      printf("highestPeakPrice:"+highestPeakPrice);
+
+      printf("lowestPeakPrice:"+lowestPeakPrice);
+
+        if(targetLevel.targetPrice>OrderOpenPrice()){
+        //buy                               
+              if (targetLevel.targetPrice<highestPeakPrice||shared.isPriceNear(targetLevel.targetPrice,Bid)){
+              printf("3");
+                  return false;
+              }else{
+              printf("4");
+                  return true;
+              }            
+         }else{
+         //sell
+            if (targetLevel.targetPrice>lowestPeakPrice||shared.isPriceNear(targetLevel.targetPrice,Bid)){
+                  printf("5");
+                  return false;
+              }else{
+                  printf("6");
+                  return true;
+              }                   
+         }               
+      }else{      
+         printf("Failed to select order by ticket.CurrentOrderTicket:"+currentOrderTicket);
+      }   
+ 
+   return NULL;
  }
  
  void openOrder(double targetPrice){
@@ -84,21 +134,16 @@ public:
    shared.alertResult(currentOrderTicket,tp,sl,volume); 
  }
  
-  void checkOrderTimeOut(){  
-   if(OrdersTotal()!=0){
+  bool wasTimeOut(){  
       if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
          double orderTime = OrderOpenTime();
          double currentTime=TimeCurrent();
          double orderAgeHours=(currentTime-orderTime)/60/60;
          if(orderAgeHours>=WORK_PERIOD*2){
-            printf("Order closing/nonLoss by timeOut");
-            if(!setNonLoss()){
-                  closeOrder();
-               }
-            currentOrderTicket=-1;        
+           return true;
          }      
-      }   
-   }   
+      }  
+   return false;   
  }  
  
   void closeOrder(){
