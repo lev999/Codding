@@ -3,8 +3,8 @@
 
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
-input double PATTERN_SL=0.9;
-input double PATTERN_TP=1;
+input double PATTERN_SL=1.0;
+input double PATTERN_TP=1.0;
 
 const double WORK_PERIOD=50;
 //+------------------------------------------------------------------+
@@ -46,7 +46,8 @@ public:
             levelManager.removeAllLevels();
          }
       }
-    }else if(wasTimeOut()){
+    }
+    else if(wasTimeOut()){
          printf("Order closing/nonLoss by timeOut");
          if(!setNonLoss()){
                closeOrder();
@@ -59,17 +60,17 @@ public:
  bool isTradingAlowed(){
    
    if(currentOrderTicket==-1){
-      printf("1");
+      //printf("1");
     return true;
    }
    
    if(wasTimeOut()){            
-       printf("2");
+       //printf("2");
      return true;
    }
    
    if(!selectLastOrder()){
-      printf("Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
+      printf("BUG:Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
       return NULL;
    }
          
@@ -80,16 +81,21 @@ public:
    double upperTargetLevel=OrderOpenPrice()+targetPips/KOEF;
    double lowerTargetLevel=OrderOpenPrice()-targetPips/KOEF;
 
-   if (upperTargetLevel<highestPeakPrice){
-      printf("3");
+//printf("upperTargetLevel:"+upperTargetLevel);
+//printf("highestPeakPrice:"+highestPeakPrice);
+//printf("lowerTargetLevel:"+lowerTargetLevel);
+//printf("lowestPeakPrice:"+lowestPeakPrice);
+//printf("-------------");
+   if (upperTargetLevel<highestPeakPrice-shared.getSpread()/KOEF){
+      //printf("3");
       return true;
    }
                         
-   if (lowerTargetLevel>lowestPeakPrice){
-      printf("4");
+   if (lowerTargetLevel>lowestPeakPrice+shared.getSpread()/KOEF){
+      //printf("4");
       return true;
    }         
-   printf("5");                   
+   //printf("5");                   
    return false;
  }
  
