@@ -99,6 +99,17 @@ public:
    return false;
  }
  
+  //int currentBar;
+  //bool isNewBar(){//used only by isTradingAlowed!
+  //    int bar=iBars(NULL,PERIOD_CURRENT);
+  //    if(currentBar!=bar){
+  //       currentBar=bar;
+  //       return true;
+  //    }else{
+  //       return false;
+  //    }
+  //}
+  
  bool selectLastOrder(){
    return OrderSelect(currentOrderTicket, SELECT_BY_TICKET); 
  }

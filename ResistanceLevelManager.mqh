@@ -22,12 +22,14 @@ class ResistanceLevelManager{
  Shared2 *shared;
   int INITIAL_SHIFT;
   int MA_PERIOD;
+ int currentBar;
  
  public:   
    ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,double WORK_PERIOD_local,Shared2* &shared_){
       shared=shared_;
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
-      WORK_PERIOD=WORK_PERIOD_local;      
+      WORK_PERIOD=WORK_PERIOD_local;
+      isNewBar();
       INITIAL_SHIFT=1;
       MA_PERIOD=3;
       
@@ -35,7 +37,7 @@ class ResistanceLevelManager{
    }
    
    bool isBidCloseToLevel(){
-      if(shared.isNewBar()){
+      if(isNewBar()){
             updateLowerPeak(); 
             updateUpperPeak();                 
          }
@@ -290,5 +292,13 @@ class ResistanceLevelManager{
       return num;   
    }
    
-  
+   bool isNewBar(){
+      int bar=iBars(NULL,PERIOD_CURRENT);
+      if(currentBar!=bar){
+         currentBar=bar;
+         return true;
+      }else{
+         return false;
+      }
+  }
 };

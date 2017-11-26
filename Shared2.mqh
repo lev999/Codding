@@ -19,8 +19,7 @@ class Shared2{
   string    isNewBar_name;
   double    tp_sl_limit_local;
   double    KOEF,SPREAD,MAX_LOSS_DOLLARS;
-  int currentBar;
- 
+  
  void setKoef(){
   int koefLocal=1; 
    for (int i=1;i<Digits;i=i+1){
@@ -33,7 +32,6 @@ class Shared2{
    Shared2(double max_loss_dollars){         
       isNewBar_name="isNewBar";
       setKoef();
-      isNewBar();
       SPREAD=(Ask-Bid)*KOEF;
       MAX_LOSS_DOLLARS=max_loss_dollars;
    }
@@ -95,15 +93,7 @@ class Shared2{
       }
   }
    
-    bool isNewBar(){
-      int bar=iBars(NULL,PERIOD_CURRENT);
-      if(currentBar!=bar){
-         currentBar=bar;
-         return true;
-      }else{
-         return false;
-      }
-  }
+   
    
    
 
