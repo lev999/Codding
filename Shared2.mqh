@@ -94,7 +94,10 @@ class Shared2{
   }
    
    
-   
+ 
+ bool selectLastOrder(int currentOrderTicket){
+   return OrderSelect(currentOrderTicket, SELECT_BY_TICKET); 
+ }  
    
 
 };
