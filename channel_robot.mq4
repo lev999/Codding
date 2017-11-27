@@ -2,6 +2,7 @@
 #include <ResistanceLevelManager.mqh>
 #include <TargetLevelBreakManager.mqh>
 #include <MinMaxTracker.mqh>
+#include <Logger.mqh>
 
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
@@ -29,6 +30,7 @@ class Channel_robot {
    MinMaxTracker *minMaxTracker;
    TargetLevel targetLevel;
    TargetLevelBreakManager *targetLevelBreakManager;
+   Logger *logger;
 public:  
  Channel_robot() {
       
@@ -38,6 +40,7 @@ public:
       levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,shared);
       minMaxTracker = new MinMaxTracker();
       targetLevelBreakManager = new TargetLevelBreakManager(shared);
+      logger = new Logger(false);
  } 
    
  void onTick(){               
@@ -56,7 +59,7 @@ public:
       }
     }
     else if(wasTimeOut()){
-         printf("Order closing/nonLoss by timeOut");
+         logger.printf("Order closing/nonLoss by timeOut");
          if(!setNonLoss()){
                closeOrder();
          }
@@ -77,15 +80,15 @@ public:
    if(wasTimeOut()){            
      return true;
    }
-printf("isTradingAlowed:0");   
+   logger.printf("isTradingAlowed:0");   
    if(targetLevelBreakManager.getTargetBreakShift()==0){
-printf("isTradingAlowed:1");   
+      logger.printf("isTradingAlowed:1");   
       updateTargetBreak();
       return false;   
    }else{
-printf("isTradingAlowed:2");   
+      logger.printf("isTradingAlowed:2");   
       if(targetLevelBreakManager.isTargetBreakOld()){
-printf("isTradingAlowed:3");   
+         logger.printf("isTradingAlowed:3");   
          return true;      
       }   
    } 
@@ -98,24 +101,24 @@ printf("isTradingAlowed:3");
    if(!shared.selectLastOrder(currentOrderTicket)){
       printf("BUG:Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
    }
-   printf("updateTargetBreak: 0");
+   logger.printf("updateTargetBreak: 0");
   
    double targetPips=MathAbs(targetLevel.targetPrice-targetLevel.initBidPrice)*KOEF;
    double upperTargetLevel=OrderOpenPrice()+targetPips/KOEF;
    double lowerTargetLevel=OrderOpenPrice()-targetPips/KOEF;
-printf("updateTargetBreak:upperTargetLevel "+upperTargetLevel);  
-printf("updateTargetBreak:minMaxTracker.getMaxLevel() "+(minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF)); 
+   logger.printf("updateTargetBreak:upperTargetLevel "+DoubleToStr(upperTargetLevel));  
+   logger.printf("updateTargetBreak:minMaxTracker.getMaxLevel() "+DoubleToStr((minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF))); 
 
    if (upperTargetLevel<minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF){
-   printf("updateTargetBreak: 1");
+      logger.printf("updateTargetBreak: 1");
       targetLevelBreakManager.updateTargetBreakShift();
    }
 
-printf("updateTargetBreak:lowerTargetLevel "+lowerTargetLevel);  
-printf("updateTargetBreak:minMaxTracker.getMinLevel() "+(minMaxTracker.getMinLevel()+shared.getSpread()/KOEF)); 
+   logger.printf("updateTargetBreak:lowerTargetLevel "+DoubleToStr(lowerTargetLevel));  
+   logger.printf("updateTargetBreak:minMaxTracker.getMinLevel() "+DoubleToStr((minMaxTracker.getMinLevel()+shared.getSpread()/KOEF))); 
                         
    if (lowerTargetLevel>minMaxTracker.getMinLevel()+shared.getSpread()/KOEF){
-  printf("updateTargetBreak: 2");
+      logger.printf("updateTargetBreak: 2");
       targetLevelBreakManager.updateTargetBreakShift();
    }         
  }
