@@ -10,8 +10,7 @@
 
 struct TPSL{
    double SL;
-   double TP;
-   
+   double TP;      
 };
 
 class Shared2{

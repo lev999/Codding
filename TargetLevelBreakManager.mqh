@@ -36,16 +36,20 @@ class TargetLevelBreakManager{
    targetBreakShift=0; 
  }
  
- bool isTargetBreakOld(){
-   if(targetBreakShift!=getNewTargetBreakShift()){
+ bool isOneBarDelayActive(){//1 BAR delay after end of targetBreak!
+   if(targetBreakShift==getNewTargetBreakShift()){
       return true;
    }else{   
       return false;
    }   
  } 
  
- int getTargetBreakShift(){
-      return targetBreakShift;
+ int wasTargetLevelReached(){
+      if(targetBreakShift==0){
+         return false;
+      }else{
+         return true;
+      }
  }
    
  private:
