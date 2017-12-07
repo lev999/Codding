@@ -45,7 +45,6 @@ class Shared2{
    
     int getMagicNumber(){
       int num = 1 + 1000*MathRand()/32768;
-      printf("magic:"+DoubleToStr(num));
       return num;
    
    }

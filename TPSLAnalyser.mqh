@@ -27,26 +27,43 @@ class TPSLAnalyser{
          finish=finish_;
          openPrice=openPrice_;
          targetPrice=targetPrice_;
-         TPpips=0;
-         SLpips=0;
          updateIdealTPLS();      
       }   
    };
    
   TPSL getIdealTPSL(){
+   
+     printf("ideal: SL="+DoubleToStr(idealTPSL.SL,2)+" TP="+DoubleToStr(idealTPSL.TP,2));
+      if((idealTPSL.SL==0)||
+         (idealTPSL.TP==0)||
+         (idealTPSL.TP<idealTPSL.SL)
+         ){         
+            printf("TPSL: applied default values");
+            return defaultTPSL;
+      }
 
-      if(idealTPSL.SL==0 || idealTPSL.TP==0){
-         printf("getIdealTPSL: applied default values");
-         return defaultTPSL;
+   TPSL finalValues;
+   finalValues.SL=idealTPSL.SL;
+   finalValues.TP=idealTPSL.TP;
+      
+      if(
+         (idealTPSL.TP>1)||
+         (idealTPSL.TP<0.3)
+         ){
+         finalValues.TP=defaultTPSL.TP;
+         printf("TPSL: default TP");       
       }
-      if(idealTPSL.TP>1){
-         idealTPSL.TP=1;
+      
+     if(
+         (idealTPSL.SL>1)||
+         (idealTPSL.SL<0.3)
+         ){
+         finalValues.SL=defaultTPSL.SL;
+         printf("TPSL: default SL");
       }
-      if(idealTPSL.SL<0.3){
-         idealTPSL.SL=0.3;
-      }
-     printf("ideal: SL="+idealTPSL.SL+" TP="+idealTPSL.TP);
-      return idealTPSL;
+      
+            
+      return finalValues;
    }
    
    
@@ -55,7 +72,7 @@ class TPSLAnalyser{
  TPSL idealTPSL;
  TPSL defaultTPSL;
  datetime start, finish;
- double openPrice,targetPrice,SLpips,TPpips;
+ double openPrice,targetPrice;
  
  void updateIdealTPLS(){
    int extreamShift,appositeExtreameShift;
@@ -83,8 +100,6 @@ class TPSLAnalyser{
  }
  
  void fillIdealTPSL(double TPpips,double SLpips){
-  TPpips=TPpips;
-  SLpips=SLpips;
   double targetPips=MathAbs(targetPrice-openPrice)*shared.getKoef();
   idealTPSL.TP=TPpips/targetPips;
   idealTPSL.SL=SLpips/targetPips; 

@@ -7,9 +7,9 @@
 
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
-input double PATTERN_SL=1.0;
-input double PATTERN_TP=1.0;
 
+const double PATTERN_SL=0.3;
+const double PATTERN_TP=0.95;
 const double WORK_PERIOD=50;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
@@ -50,6 +50,7 @@ public:
     minMaxTracker.update();
     if(OrdersTotal()==0){    
       if(isTradingAlowed()){
+      logger.print("TradingAlowed...");
          if(levelManager.isBidCloseToLevel()){
             double targetPrice=levelManager.getSimetricLevelPrice();
             targetLevel.targetPrice=targetPrice;
@@ -62,7 +63,7 @@ public:
       }
     }
     else if(wasTimeOut()){
-         logger.printf("Order closing/nonLoss by timeOut");
+         logger.print("Order closing/nonLoss by timeOut");
          if(!setNonLoss()){
                closeOrder();
          }
@@ -83,15 +84,15 @@ public:
      updateSLTPAnalyser();       
      return true;
    }
-   logger.printf("isTradingAlowed:0");   
+   logger.print("isTradingAlowed:0");   
    if(!targetLevelBreakManager.wasTargetLevelReached()){
-      logger.printf("isTradingAlowed:1");   
+      logger.print("isTradingAlowed:1");   
       updateTargetBreak();
       return false;   
    }else{
-      logger.printf("isTradingAlowed:2");   
+      logger.print("isTradingAlowed:2");   
       if(!targetLevelBreakManager.isOneBarDelayActive()){
-         logger.printf("isTradingAlowed:3");            
+         logger.print("isTradingAlowed:3");            
          return true;      
       }   
    } 
@@ -105,25 +106,25 @@ public:
    if(!shared.selectLastOrder(currentOrderTicket)){
       printf("BUG:Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
    }
-   logger.printf("updateTargetBreak: 0");
+   logger.print("updateTargetBreak: 0");
   
    double targetPips=MathAbs(targetLevel.targetPrice-targetLevel.initBidPrice)*KOEF;
    double upperTargetLevel=OrderOpenPrice()+targetPips/KOEF;
    double lowerTargetLevel=OrderOpenPrice()-targetPips/KOEF;
-   logger.printf("updateTargetBreak:upperTargetLevel "+DoubleToStr(upperTargetLevel));  
-   logger.printf("updateTargetBreak:minMaxTracker.getMaxLevel() "+DoubleToStr((minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF))); 
+   logger.print("updateTargetBreak:upperTargetLevel "+DoubleToStr(upperTargetLevel));  
+   logger.print("updateTargetBreak:minMaxTracker.getMaxLevel() "+DoubleToStr((minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF))); 
 
    if (upperTargetLevel<minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF){
-      logger.printf("updateTargetBreak: 1");
+      logger.print("updateTargetBreak: 1");
       targetLevelBreakManager.updateTargetBreakShift();
       updateSLTPAnalyser();
    }
 
-   logger.printf("updateTargetBreak:lowerTargetLevel "+DoubleToStr(lowerTargetLevel));  
-   logger.printf("updateTargetBreak:minMaxTracker.getMinLevel() "+DoubleToStr((minMaxTracker.getMinLevel()+shared.getSpread()/KOEF))); 
+   logger.print("updateTargetBreak:lowerTargetLevel "+DoubleToStr(lowerTargetLevel));  
+   logger.print("updateTargetBreak:minMaxTracker.getMinLevel() "+DoubleToStr((minMaxTracker.getMinLevel()+shared.getSpread()/KOEF))); 
                         
    if (lowerTargetLevel>minMaxTracker.getMinLevel()+shared.getSpread()/KOEF){
-      logger.printf("updateTargetBreak: 2");
+      logger.print("updateTargetBreak: 2");
       targetLevelBreakManager.updateTargetBreakShift();
       updateSLTPAnalyser();
    }         

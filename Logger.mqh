@@ -16,7 +16,7 @@ class Logger{
       isDebugMode=isDebugMode_;
    }
    
-   void printf(string str){   
+   void print(string str){   
       if(isDebugMode){
          printf(str);      
       }   
