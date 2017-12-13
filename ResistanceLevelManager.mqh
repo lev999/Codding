@@ -8,21 +8,25 @@
 #property version   "1.00"
 #property strict
 #include <Shared2.mqh>
+#include <Logger.mqh>
 
 
 struct Peak{
    double price;
    datetime time;
+   double oppositePrice;
 };
 
 class ResistanceLevelManager{
  
  double MIN_WORKING_CHANNEL,WORK_PERIOD;
  bool hasValidChannel;
- Shared2 *shared;
+  Shared2 *shared;
+  Logger *logger;
   int INITIAL_SHIFT;
   int MA_PERIOD;
  int currentBar;
+ int STEPS,START_SHIFT;
  
  public:   
    ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,double WORK_PERIOD_local,Shared2* &shared_){
@@ -32,29 +36,43 @@ class ResistanceLevelManager{
       isNewBar();
       INITIAL_SHIFT=1;
       MA_PERIOD=3;
-      
+      STEPS=3;
+      logger = new Logger(false);
       lowerPeak.price=-1;
+      START_SHIFT=2;
    }
    
    bool isBidCloseToLevel(){
       if(isNewBar()){
+            logger.print("isBidCloseToLevel 0");
             updateLowerPeak(); 
-            updateUpperPeak();                 
+             logger.print("isBidCloseToLevel 1");
+           updateUpperPeak();                 
+            logger.print("isBidCloseToLevel 2");
          }
+       logger.print("isBidCloseToLevel 3");
+
        removeOutDatedLevels();           
       return isPriceCloseToOneOfLevels();
    }
       
    double getSimetricLevelPrice(){
       if(activePeak.price!=-1){
-         double apositePeakPrice;
-         int shift=iBarShift(NULL,0,activePeak.time,true); 
-         if(activePeak.price==lowerPeak.price){                       
-            apositePeakPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,shift+10,1));//10 is here trend time life estimation
+         double opositePeakPrice; 
+         if(activePeak.price==lowerPeak.price){
+            if(lowerPeak.oppositePrice!=NULL){
+               opositePeakPrice=lowerPeak.oppositePrice;
+            }else{
+               opositePeakPrice=upperPeak.price;
+            }
          }else{
-             apositePeakPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,shift+10,1)); //10 is here trend time life estimation         
+            if(upperPeak.oppositePrice!=NULL){
+               opositePeakPrice=upperPeak.oppositePrice;
+            }else{
+               opositePeakPrice=lowerPeak.price;
+            }
          }
-         return apositePeakPrice;
+         return opositePeakPrice;
       }else{
          return -1;      
       }            
@@ -88,146 +106,102 @@ class ResistanceLevelManager{
 //+------------------------------------------------------------------+
 //|  LOWER PEAK                                                                |
 //+------------------------------------------------------------------+
-  void updateLowerPeak(){  
-    int peakShift=getLowestPeakShift(MA_PERIOD);  
-    while(true){
-       if(peakShift!=-1){
-           double highestPrice=iHigh(NULL,0,iHighest(NULL,0,MODE_HIGH,peakShift+1,1));            
-           if((highestPrice-Bid)*shared.getKoef()>MIN_WORKING_CHANNEL){
-               createLowerPeak(peakShift);
-               return; 
-           }else{
-               int newPeakShift=getLowestPeakShift(peakShift); 
-               if(newPeakShift==peakShift){
-                  return;
-               }else{
-               peakShift=newPeakShift;               
-               }
-               
-           }           
-       }else {return;}       
-     }    
-  }
-   
   Peak lowerPeak; 
-  void createLowerPeak(int peakShift){     
-   double price=iLow(NULL,0,peakShift);   
-   if(lowerPeak.price!=price){
-      ObjectDelete(0,DoubleToStr(lowerPeak.price));
-      ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
-      
-      lowerPeak.price=price;
-      lowerPeak.time=iTime(NULL,0,peakShift);
-      createObjectSymbol(lowerPeak);
-      createObjectLine(lowerPeak);
-      
-      
-   }
-  }
-  
-  int getLowestPeakShift(int shift){      
-      int peakShiftMA=getLowMAPeakShift(shift);
-      if(peakShiftMA==-1){return peakShiftMA;}      
-
-      int peakShiftClosest=iLowest(NULL,0,MODE_LOW,(peakShiftMA-shift),shift);   
-      int finalpeakShift;
-      if(Low[peakShiftClosest]<Low[peakShiftMA]){
-         finalpeakShift=peakShiftClosest;
-      }else{
-         finalpeakShift=peakShiftMA;
-      }
-      return finalpeakShift;
-   }   
+  void updateLowerPeak(){
+      logger.print("updateLowerPeak 0");
    
-    int getLowMAPeakShift(int shift){
-      int i=shift;
-      double val1=0,val2=0,val3=0,initialPrice=Bid;
-      while(i<WORK_PERIOD){
-       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i);
-       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+1);
-       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_LOW,i+2);
-            
-       if(val1>val2&&val3>val2){
-         int tmpPeakShiftMA=iLowest(NULL,0,MODE_LOW,3,i);
-         if(Low[tmpPeakShiftMA]<initialPrice||shared.isPriceNear(initialPrice,Low[tmpPeakShiftMA])){
-           return tmpPeakShiftMA;           
-         } 
-       }
-      i++;
+      int shift=getLowestShift();
+      if(shift==NULL){return;}
+      logger.print("updateLowerPeak 1");
+      double price=iLow(NULL,0,shift); 
+      
+      int oppositeShift=iHighest(NULL,0,MODE_HIGH,shift,START_SHIFT);
+      double oppositePrice=iHigh(NULL,0,oppositeShift);  
+      if(oppositePrice<Bid+MIN_WORKING_CHANNEL/shared.getKoef()){
+         oppositePrice=NULL;
       }
-      return -1;
-  }
+      
+      if(lowerPeak.price!=price){
+            ObjectDelete(0,DoubleToStr(lowerPeak.price));
+            ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
+            
+            lowerPeak.price=price;
+            lowerPeak.time=iTime(NULL,0,shift);
+            lowerPeak.oppositePrice=oppositePrice;      
+            
+            createObjectSymbol(lowerPeak);
+            createObjectLine(lowerPeak);
+      }
+ }
+   
+int getLowestShift(){ 
+   logger.print("getLowestShift 0");          
+   int searchPeriod=WORK_PERIOD+1;
+   while(searchPeriod<WORK_PERIOD*2){
+      logger.print("getLowestShift 1");          
+      int lowShift=iLowest(NULL,0,MODE_LOW,searchPeriod,START_SHIFT);
+      double lowPrice=iLow(NULL,0,lowShift);  
+      logger.print("getLowestShift 2");
+      logger.print("getLowestShift lowShift "+lowShift);
+      logger.print("getLowestShift lowPrice "+lowPrice);
+                
+      if(lowShift-STEPS>START_SHIFT&&lowShift+STEPS<searchPeriod&&lowPrice<Bid-MIN_WORKING_CHANNEL/shared.getKoef()){
+         logger.print("getLowestShift 3");          
+         return lowShift;         
+      }else{
+         searchPeriod=searchPeriod+1;
+         logger.print("getLowestShift 4");          
+         logger.print("searchPeriod "+ searchPeriod);          
+      }      
+   }
+    printf("NEW LowestShift was not found in WORK_PERIOD*2: "+searchPeriod);
+  return NULL;
+}
+
 //+------------------------------------------------------------------+
 //|  Upper PEAK                                                      |
 //+------------------------------------------------------------------+
-
-  void updateUpperPeak(){  
-    int peakShift=getHighestPeakShift(MA_PERIOD);  
-    while(true){
-       if(peakShift!=-1){
-           double lowestPrice=iLow(NULL,0,iLowest(NULL,0,MODE_LOW,peakShift+1,1));            
-           if((Bid-lowestPrice)*shared.getKoef()>MIN_WORKING_CHANNEL){
-               createUpperPeak(peakShift);
-               return; 
-           }else{
-               int newPeakShift=getHighestPeakShift(peakShift); 
-               if(newPeakShift==peakShift){
-                  return;
-               }else{
-                  peakShift=newPeakShift;               
-               }               
-           }           
-       }else {return;}       
-     }    
-  }
-   
   Peak upperPeak; 
-  void createUpperPeak(int peakShift){     
-   double price=iHigh(NULL,0,peakShift); 
-   if(upperPeak.price!=price){
-      ObjectDelete(0,DoubleToStr(upperPeak.price));
-      ObjectDelete(0,DoubleToStr(upperPeak.price+1));
+  void updateUpperPeak(){   
+      int shift=getHighestShift();
+      if(shift==NULL){return;}
+      double price=iHigh(NULL,0,shift); 
       
-      upperPeak.price=price;
-      upperPeak.time=iTime(NULL,0,peakShift);
-      createObjectSymbol(upperPeak);
-      createObjectLine(upperPeak);         
-   }
-  }
-  
-  int getHighestPeakShift(int shift){      
-      int peakShiftMA=getHighMAPeakShift(shift);
-      if(peakShiftMA==-1){return peakShiftMA;}      
-
-      int peakShiftClosest=iHighest(NULL,0,MODE_HIGH,(peakShiftMA-shift),shift);   
-      int finalpeakShift;
-      if(High[peakShiftClosest]>High[peakShiftMA]){
-         finalpeakShift=peakShiftClosest;
-      }else{
-         finalpeakShift=peakShiftMA;
+      int oppositeShift=iLowest(NULL,0,MODE_LOW,shift,START_SHIFT);
+      double oppositePrice=iLow(NULL,0,oppositeShift);  
+      if(oppositePrice>Bid-MIN_WORKING_CHANNEL/shared.getKoef()){
+         oppositePrice=NULL;
       }
-      return finalpeakShift;
-   }   
-   
-    int getHighMAPeakShift(int shift){
-      int i=shift;
-      double val1=0,val2=0,val3=0,initialPrice=Bid;
-      while(i<WORK_PERIOD){
-       val1=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i);
-       val2=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+1);
-       val3=iMA(NULL,0,MA_PERIOD,0,MODE_SMA,PRICE_HIGH,i+2);
+      
+      if(upperPeak.price!=price){
+            ObjectDelete(0,DoubleToStr(upperPeak.price));
+            ObjectDelete(0,DoubleToStr(upperPeak.price+1));
             
-       if(val1<val2&&val3<val2){
-         int tmpPeakShiftMA=iHighest(NULL,0,MODE_HIGH,3,i);
-         if(High[tmpPeakShiftMA]>initialPrice||shared.isPriceNear(initialPrice,High[tmpPeakShiftMA])){
-           return tmpPeakShiftMA;           
-         } 
-       }
-      i++;
+            upperPeak.price=price;
+            upperPeak.time=iTime(NULL,0,shift);
+            upperPeak.oppositePrice=oppositePrice;      
+            
+            createObjectSymbol(upperPeak);
+            createObjectLine(upperPeak);
       }
-      return -1;
-  }
-
+ }
+   
+int getHighestShift(){           
+   int searchPeriod=WORK_PERIOD+1;
+   while(searchPeriod<WORK_PERIOD*2){
+      int highShift=iHighest(NULL,0,MODE_HIGH,searchPeriod,START_SHIFT);
+      double highestPrice=iHigh(NULL,0,highShift);  
+   
+      if(highShift-STEPS>START_SHIFT&&highShift+STEPS<searchPeriod&&highestPrice>Bid+MIN_WORKING_CHANNEL/shared.getKoef()){
+         return highShift;
+         break;
+      }else{
+         searchPeriod=searchPeriod+1;
+      }      
+   }
+   printf("NEW HighestShift was not found in WORK_PERIOD*2: "+searchPeriod);
+   return NULL;
+}
 //------------------------------------------
    
   void createObjectLine(const Peak& line){

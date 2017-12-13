@@ -49,8 +49,8 @@ public:
  void onTick(){               
     minMaxTracker.update();
     if(OrdersTotal()==0){    
-      if(isTradingAlowed()){
-      logger.print("TradingAlowed...");
+     // if(isTradingAlowed()){
+    //  logger.print("TradingAlowed...");
          if(levelManager.isBidCloseToLevel()){
             double targetPrice=levelManager.getSimetricLevelPrice();
             targetLevel.targetPrice=targetPrice;
@@ -60,7 +60,7 @@ public:
             targetLevelBreakManager.resetTargetBreakShift(currentOrderTicket);
             levelManager.removeAllLevels();
          }
-      }
+      //}
     }
     else if(wasTimeOut()){
          logger.print("Order closing/nonLoss by timeOut");
@@ -139,11 +139,13 @@ public:
  }
   
  void openOrder(double targetPrice){
+   // NOTE: direction should be in the way of longer Stop==> SL always will be less TP
    double sl=-1;
    double tp=-1;
    int orderType;
    color    colorOrder; 
    TPSL tpsl=tpslAnalyzer.getIdealTPSL();
+   
    
    double pattern_sl=tpsl.SL;
    double pattern_tp=tpsl.TP;   
