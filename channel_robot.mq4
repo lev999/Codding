@@ -10,7 +10,7 @@ input int     MIN_WORKING_CHANNEL=20;
 
 const double PATTERN_SL=0.3;
 const double PATTERN_TP=0.95;
-const double WORK_PERIOD=50;
+const int WORK_PERIOD=50;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
 //+------------------------------------------------------------------+

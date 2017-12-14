@@ -19,7 +19,8 @@ struct Peak{
 
 class ResistanceLevelManager{
  
- double MIN_WORKING_CHANNEL,WORK_PERIOD;
+ double MIN_WORKING_CHANNEL;
+ int WORK_PERIOD;
  bool hasValidChannel;
   Shared2 *shared;
   Logger *logger;
@@ -29,7 +30,7 @@ class ResistanceLevelManager{
  int STEPS,START_SHIFT;
  
  public:   
-   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,double WORK_PERIOD_local,Shared2* &shared_){
+   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,int WORK_PERIOD_local,Shared2* &shared_){
       shared=shared_;
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
       WORK_PERIOD=WORK_PERIOD_local;
@@ -43,16 +44,15 @@ class ResistanceLevelManager{
    }
    
    bool isBidCloseToLevel(){
+      removeOutDatedLevels();
       if(isNewBar()){
-            logger.print("isBidCloseToLevel 0");
-            updateLowerPeak(); 
-             logger.print("isBidCloseToLevel 1");
-           updateUpperPeak();                 
-            logger.print("isBidCloseToLevel 2");
-         }
-       logger.print("isBidCloseToLevel 3");
-
-       removeOutDatedLevels();           
+         logger.print("isBidCloseToLevel 0");
+         updateLowerPeak();
+         logger.print("isBidCloseToLevel 1");
+         updateUpperPeak();                 
+         logger.print("isBidCloseToLevel 2");       
+      }
+      logger.print("isBidCloseToLevel 3");
       return isPriceCloseToOneOfLevels();
    }
       
@@ -89,10 +89,10 @@ class ResistanceLevelManager{
  void removeOutDatedLevels(){   
    double closeDelta=(0.25*MIN_WORKING_CHANNEL/shared.getKoef());
    if(lowerPeak.price!=-1&&Bid<(lowerPeak.price-closeDelta)){
-       removePeak(lowerPeak);         
+       removePeak(lowerPeak);        
    }else
    if(upperPeak.price!=-1&&Bid>(upperPeak.price+closeDelta)){
-      removePeak(upperPeak);         
+      removePeak(upperPeak);               
    } 
  }
  
@@ -104,7 +104,7 @@ class ResistanceLevelManager{
  
  
 //+------------------------------------------------------------------+
-//|  LOWER PEAK                                                                |
+//|  LOWER PEAK                                                      |
 //+------------------------------------------------------------------+
   Peak lowerPeak; 
   void updateLowerPeak(){
@@ -114,7 +114,7 @@ class ResistanceLevelManager{
       if(shift==NULL){return;}
       logger.print("updateLowerPeak 1");
       double price=iLow(NULL,0,shift); 
-      
+      if(lowerPeak.price!=-1&&lowerPeak.price>price){return;}      
       int oppositeShift=iHighest(NULL,0,MODE_HIGH,shift,START_SHIFT);
       double oppositePrice=iHigh(NULL,0,oppositeShift);  
       if(oppositePrice<Bid+MIN_WORKING_CHANNEL/shared.getKoef()){
@@ -142,8 +142,8 @@ int getLowestShift(){
       int lowShift=iLowest(NULL,0,MODE_LOW,searchPeriod,START_SHIFT);
       double lowPrice=iLow(NULL,0,lowShift);  
       logger.print("getLowestShift 2");
-      logger.print("getLowestShift lowShift "+lowShift);
-      logger.print("getLowestShift lowPrice "+lowPrice);
+      logger.print("getLowestShift lowShift "+DoubleToString(lowShift));
+      logger.print("getLowestShift lowPrice "+DoubleToString(lowPrice));
                 
       if(lowShift-STEPS>START_SHIFT&&lowShift+STEPS<searchPeriod&&lowPrice<Bid-MIN_WORKING_CHANNEL/shared.getKoef()){
          logger.print("getLowestShift 3");          
@@ -151,10 +151,10 @@ int getLowestShift(){
       }else{
          searchPeriod=searchPeriod+1;
          logger.print("getLowestShift 4");          
-         logger.print("searchPeriod "+ searchPeriod);          
+         logger.print("searchPeriod "+ DoubleToString(searchPeriod));          
       }      
    }
-    printf("NEW LowestShift was not found in WORK_PERIOD*2: "+searchPeriod);
+   // printf("NEW LowestShift was not found in WORK_PERIOD*2: "+searchPeriod);
   return NULL;
 }
 
@@ -166,7 +166,7 @@ int getLowestShift(){
       int shift=getHighestShift();
       if(shift==NULL){return;}
       double price=iHigh(NULL,0,shift); 
-      
+      if(upperPeak.price!=-1&&upperPeak.price<price){return;}      
       int oppositeShift=iLowest(NULL,0,MODE_LOW,shift,START_SHIFT);
       double oppositePrice=iLow(NULL,0,oppositeShift);  
       if(oppositePrice>Bid-MIN_WORKING_CHANNEL/shared.getKoef()){
@@ -199,7 +199,7 @@ int getHighestShift(){
          searchPeriod=searchPeriod+1;
       }      
    }
-   printf("NEW HighestShift was not found in WORK_PERIOD*2: "+searchPeriod);
+  // printf("NEW HighestShift was not found in WORK_PERIOD*2: "+searchPeriod);
    return NULL;
 }
 //------------------------------------------
