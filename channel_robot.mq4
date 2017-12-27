@@ -32,7 +32,6 @@ class Channel_robot {
    TargetLevel targetLevel;
    TargetLevelBreakManager *targetLevelBreakManager;
    Logger *logger;
-   TPSLAnalyser *tpslAnalyzer;
 public:  
  Channel_robot() {
       
@@ -43,7 +42,6 @@ public:
       minMaxTracker = new MinMaxTracker();
       targetLevelBreakManager = new TargetLevelBreakManager(shared);
       logger = new Logger(false);
-      tpslAnalyzer = new TPSLAnalyser(PATTERN_SL,PATTERN_TP,shared);
  } 
    
  void onTick(){               
@@ -80,8 +78,7 @@ public:
      return true;
    }
    
-   if(wasTimeOut()){  
-     updateSLTPAnalyser();       
+   if(wasTimeOut()){     
      return true;
    }
    logger.print("isTradingAlowed:0");   
@@ -117,7 +114,6 @@ public:
    if (upperTargetLevel<minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF){
       logger.print("updateTargetBreak: 1");
       targetLevelBreakManager.updateTargetBreakShift();
-      updateSLTPAnalyser();
    }
 
    logger.print("updateTargetBreak:lowerTargetLevel "+DoubleToStr(lowerTargetLevel));  
@@ -126,29 +122,19 @@ public:
    if (lowerTargetLevel>minMaxTracker.getMinLevel()+shared.getSpread()/KOEF){
       logger.print("updateTargetBreak: 2");
       targetLevelBreakManager.updateTargetBreakShift();
-      updateSLTPAnalyser();
    }         
  }
  
- void updateSLTPAnalyser(){
-
-   if(!shared.selectLastOrder(currentOrderTicket)){
-      printf("BUG(updateSLTPAnalyser):Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
-   }
-   tpslAnalyzer.update(targetLevel.targetPrice,OrderOpenPrice(),OrderOpenTime(),TimeCurrent());
- }
-  
  void openOrder(double targetPrice){
    // NOTE: direction should be in the way of longer Stop==> SL always will be less TP
    double sl=-1;
    double tp=-1;
    int orderType;
    color    colorOrder; 
-   TPSL tpsl=tpslAnalyzer.getIdealTPSL();
    
    
-   double pattern_sl=tpsl.SL;
-   double pattern_tp=tpsl.TP;   
+   double pattern_sl=PATTERN_SL;
+   double pattern_tp=PATTERN_TP;   
    double H_pips=MathAbs(Bid-targetPrice);
    double openPrice;
    if(targetPrice>Bid){
