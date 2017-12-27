@@ -8,7 +8,7 @@
 input double  MAX_LOSS_DOLLARS=50;
 input int     MIN_WORKING_CHANNEL=20; 
 
-const double PATTERN_SL=0.3;
+const double PATTERN_SL=0.75;
 const double PATTERN_TP=0.95;
 const int WORK_PERIOD=50;
 //+------------------------------------------------------------------+

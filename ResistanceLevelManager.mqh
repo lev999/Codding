@@ -60,18 +60,11 @@ class ResistanceLevelManager{
       if(activePeak.price!=-1){
          double opositePeakPrice; 
          if(activePeak.price==lowerPeak.price){
-            if(lowerPeak.oppositePrice!=NULL){
-               opositePeakPrice=lowerPeak.oppositePrice;
-            }else{
-               opositePeakPrice=upperPeak.price;
-            }
+            opositePeakPrice=lowerPeak.oppositePrice;
          }else{
-            if(upperPeak.oppositePrice!=NULL){
-               opositePeakPrice=upperPeak.oppositePrice;
-            }else{
-               opositePeakPrice=lowerPeak.price;
-            }
+            opositePeakPrice=upperPeak.oppositePrice;
          }
+         
          return opositePeakPrice;
       }else{
          return -1;      
@@ -116,10 +109,7 @@ class ResistanceLevelManager{
       double price=iLow(NULL,0,shift); 
       if(lowerPeak.price!=-1&&lowerPeak.price>price){return;}      
       int oppositeShift=iHighest(NULL,0,MODE_HIGH,shift,START_SHIFT);
-      double oppositePrice=iHigh(NULL,0,oppositeShift);  
-      if(oppositePrice<Bid+MIN_WORKING_CHANNEL/shared.getKoef()){
-         oppositePrice=NULL;
-      }
+      double oppositePrice=iHigh(NULL,0,oppositeShift);
       
       if(lowerPeak.price!=price){
             ObjectDelete(0,DoubleToStr(lowerPeak.price));
@@ -168,10 +158,7 @@ int getLowestShift(){
       double price=iHigh(NULL,0,shift); 
       if(upperPeak.price!=-1&&upperPeak.price<price){return;}      
       int oppositeShift=iLowest(NULL,0,MODE_LOW,shift,START_SHIFT);
-      double oppositePrice=iLow(NULL,0,oppositeShift);  
-      if(oppositePrice>Bid-MIN_WORKING_CHANNEL/shared.getKoef()){
-         oppositePrice=NULL;
-      }
+      double oppositePrice=iLow(NULL,0,oppositeShift);
       
       if(upperPeak.price!=price){
             ObjectDelete(0,DoubleToStr(upperPeak.price));
