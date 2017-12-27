@@ -6,11 +6,12 @@
 #include <TPSLAnalyser.mqh>
 
 input double  MAX_LOSS_DOLLARS=50;
-input int     MIN_WORKING_CHANNEL=20; 
 
+const int    MIN_WORKING_CHANNEL=20; 
+const int    SLIP_PIPS=20; 
+const int    WORK_PERIOD=50;
 const double PATTERN_SL=0.75;
 const double PATTERN_TP=0.95;
-const int WORK_PERIOD=50;
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
 //+------------------------------------------------------------------+
@@ -38,7 +39,7 @@ public:
       shared = new Shared2(MAX_LOSS_DOLLARS); 
       KOEF = shared.getKoef();   
       currentOrderTicket = -1; 
-      levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,shared);
+      levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,SLIP_PIPS,shared);
       minMaxTracker = new MinMaxTracker();
       targetLevelBreakManager = new TargetLevelBreakManager(shared);
       logger = new Logger(false);

@@ -20,7 +20,7 @@ struct Peak{
 class ResistanceLevelManager{
  
  double MIN_WORKING_CHANNEL;
- int WORK_PERIOD;
+ int WORK_PERIOD,SLIP_PIPS;
  bool hasValidChannel;
   Shared2 *shared;
   Logger *logger;
@@ -30,8 +30,9 @@ class ResistanceLevelManager{
  int STEPS,START_SHIFT;
  
  public:   
-   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,int WORK_PERIOD_local,Shared2* &shared_){
+   ResistanceLevelManager(double MIN_WORKING_CHANNEL_local,int WORK_PERIOD_local,int SLIP_PIPS_local,Shared2* &shared_){
       shared=shared_;
+      SLIP_PIPS=SLIP_PIPS_local;
       MIN_WORKING_CHANNEL=MIN_WORKING_CHANNEL_local;
       WORK_PERIOD=WORK_PERIOD_local;
       isNewBar();
@@ -64,7 +65,7 @@ class ResistanceLevelManager{
          }else{
             opositePeakPrice=upperPeak.oppositePrice;
          }
-         
+         removeAllLevels();
          return opositePeakPrice;
       }else{
          return -1;      
@@ -80,7 +81,7 @@ class ResistanceLevelManager{
  private:
  
  void removeOutDatedLevels(){   
-   double closeDelta=(0.25*MIN_WORKING_CHANNEL/shared.getKoef());
+   double closeDelta=(SLIP_PIPS/shared.getKoef());
    if(lowerPeak.price!=-1&&Bid<(lowerPeak.price-closeDelta)){
        removePeak(lowerPeak);        
    }else
@@ -234,18 +235,26 @@ int getHighestShift(){
         } 
   }   
    Peak activePeak;
-   bool isPriceCloseToOneOfLevels(){
-      if(lowerPeak.price!=-1&&shared.isPriceNear(lowerPeak.price)){
-         activePeak=lowerPeak;
-         return true;
+   bool isPriceCloseToOneOfLevels(){   
+      double slipDelta=(SLIP_PIPS/shared.getKoef());
+      
+      if(lowerPeak.price!=-1){
+         if((shared.isPriceNear(lowerPeak.price))||
+            (Bid<lowerPeak.price)&&(Bid>(lowerPeak.price-slipDelta))         
+         ){         
+            activePeak=lowerPeak;
+            return true;
+         }        
       }
-      else if(upperPeak.price!=-1&&shared.isPriceNear(upperPeak.price)){
-         activePeak=upperPeak;
-         return true;
+      if(upperPeak.price!=-1){      
+         if((shared.isPriceNear(upperPeak.price))||
+            (Bid>upperPeak.price)&&(Bid<(upperPeak.price+slipDelta))     
+         ){         
+            activePeak=upperPeak;
+            return true;         
+         }      
       }
-      else{
-         return false;
-      }      
+       return false;     
    }
    
    int getMagicNumber(){

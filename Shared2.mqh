@@ -63,6 +63,8 @@ class Shared2{
    double getKoef(){
       return KOEF;
   }
+  
+
 
       
  double getLot(double H_pips ){      
