@@ -58,14 +58,18 @@ class ResistanceLevelManager{
    }
       
    double getSimetricLevelPrice(){
+   logger.print("getSimetricLevel");
       if(activePeak.price!=-1){
          double opositePeakPrice; 
          if(activePeak.price==lowerPeak.price){
             opositePeakPrice=lowerPeak.oppositePrice;
+            logger.print("lower");
          }else{
             opositePeakPrice=upperPeak.oppositePrice;
+            logger.print("upper");
          }
          removeAllLevels();
+         logger.print("opositePeakPrice="+DoubleToStr(opositePeakPrice));
          return opositePeakPrice;
       }else{
          return -1;      
@@ -108,17 +112,17 @@ class ResistanceLevelManager{
       if(shift==NULL){return;}
       logger.print("updateLowerPeak 1");
       double price=iLow(NULL,0,shift); 
-      if(lowerPeak.price!=-1&&lowerPeak.price>price){return;}      
+      if(lowerPeak.price!=-1&&lowerPeak.price>price){printf("BUG updateLowerPeak");}     
       int oppositeShift=iHighest(NULL,0,MODE_HIGH,shift,START_SHIFT);
       double oppositePrice=iHigh(NULL,0,oppositeShift);
-      
+      lowerPeak.oppositePrice=oppositePrice;
       if(lowerPeak.price!=price){
             ObjectDelete(0,DoubleToStr(lowerPeak.price));
             ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
             
             lowerPeak.price=price;
             lowerPeak.time=iTime(NULL,0,shift);
-            lowerPeak.oppositePrice=oppositePrice;      
+                  
             
             createObjectSymbol(lowerPeak);
             createObjectLine(lowerPeak);
@@ -154,21 +158,23 @@ int getLowestShift(){
 //+------------------------------------------------------------------+
   Peak upperPeak; 
   void updateUpperPeak(){   
+      logger.print("updateUpperPeak");
       int shift=getHighestShift();
+            logger.print("shift="+DoubleToStr(shift));
       if(shift==NULL){return;}
-      double price=iHigh(NULL,0,shift); 
-      if(upperPeak.price!=-1&&upperPeak.price<price){return;}      
+      double price=iHigh(NULL,0,shift);
+            logger.print("price="+DoubleToStr(price)); 
+      if(upperPeak.price!=-1&&upperPeak.price<price){printf("BUG updateUpperPeak");}      
       int oppositeShift=iLowest(NULL,0,MODE_LOW,shift,START_SHIFT);
       double oppositePrice=iLow(NULL,0,oppositeShift);
-      
+      upperPeak.oppositePrice=oppositePrice; 
       if(upperPeak.price!=price){
             ObjectDelete(0,DoubleToStr(upperPeak.price));
             ObjectDelete(0,DoubleToStr(upperPeak.price+1));
             
             upperPeak.price=price;
             upperPeak.time=iTime(NULL,0,shift);
-            upperPeak.oppositePrice=oppositePrice;      
-            
+     
             createObjectSymbol(upperPeak);
             createObjectLine(upperPeak);
       }
@@ -240,7 +246,7 @@ int getHighestShift(){
       
       if(lowerPeak.price!=-1){
          if((shared.isPriceNear(lowerPeak.price))||
-            (Bid<lowerPeak.price)&&(Bid>(lowerPeak.price-slipDelta))         
+            ((Bid<lowerPeak.price)&&(Bid>(lowerPeak.price-slipDelta)))         
          ){         
             activePeak=lowerPeak;
             return true;
@@ -248,7 +254,7 @@ int getHighestShift(){
       }
       if(upperPeak.price!=-1){      
          if((shared.isPriceNear(upperPeak.price))||
-            (Bid>upperPeak.price)&&(Bid<(upperPeak.price+slipDelta))     
+            ((Bid>upperPeak.price)&&(Bid<(upperPeak.price+slipDelta)))     
          ){         
             activePeak=upperPeak;
             return true;         
