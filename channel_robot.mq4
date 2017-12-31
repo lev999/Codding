@@ -1,7 +1,6 @@
 #include <Shared2.mqh>
 #include <ResistanceLevelManager.mqh>
-#include <TargetLevelBreakManager.mqh>
-#include <MinMaxTracker.mqh>
+#include <TrendDetector.mqh>
 #include <Logger.mqh>
 #include <TPSLAnalyser.mqh>
 
@@ -29,10 +28,9 @@ class Channel_robot {
    int currentOrderTicket;
    Shared2 *shared;
    ResistanceLevelManager *levelManager;
-   MinMaxTracker *minMaxTracker;
    TargetLevel targetLevel;
-   TargetLevelBreakManager *targetLevelBreakManager;
    Logger *logger;
+   TrendDetector *trendDetector;
 public:  
  Channel_robot() {
       
@@ -40,26 +38,20 @@ public:
       KOEF = shared.getKoef();   
       currentOrderTicket = -1; 
       levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,SLIP_PIPS,shared);
-      minMaxTracker = new MinMaxTracker();
-      targetLevelBreakManager = new TargetLevelBreakManager(shared);
       logger = new Logger(false);
+      trendDetector = new TrendDetector(WORK_PERIOD);
  } 
    
  void onTick(){               
-    minMaxTracker.update();
     if(OrdersTotal()==0){    
-     // if(isTradingAlowed()){
-    //  logger.print("TradingAlowed...");
+         trendDetector.update();
          if(levelManager.isBidCloseToLevel()){
-            double targetPrice=levelManager.getSimetricLevelPrice();
+            double targetPrice=levelManager.getSimetricLevelPrice();            
             targetLevel.targetPrice=targetPrice;
             targetLevel.initBidPrice=Bid;
-            openOrder(targetPrice);
-            minMaxTracker.reset();
-            targetLevelBreakManager.resetTargetBreakShift(currentOrderTicket);
+            openOrder(targetPrice,trendDetector.getOrderType());
             levelManager.removeAllLevels();
          }
-      //}
     }
     else if(wasTimeOut()){
          logger.print("Order closing/nonLoss by timeOut");
@@ -69,68 +61,14 @@ public:
       }          
  }
  
- bool isTradingAlowed(){
-   
-   if(targetLevelBreakManager.isFirstTrade()){
-     return true;
-   }
-      
-   if(currentOrderTicket==-1){
-     return true;
-   }
-   
-   if(wasTimeOut()){     
-     return true;
-   }
-   logger.print("isTradingAlowed:0");   
-   if(!targetLevelBreakManager.wasTargetLevelReached()){
-      logger.print("isTradingAlowed:1");   
-      updateTargetBreak();
-      return false;   
-   }else{
-      logger.print("isTradingAlowed:2");   
-      if(!targetLevelBreakManager.isOneBarDelayActive()){
-         logger.print("isTradingAlowed:3");            
-         return true;      
-      }   
-   } 
-   
-   return false;
- }
  
 
  
- void updateTargetBreak(){
-   if(!shared.selectLastOrder(currentOrderTicket)){
-      printf("BUG:Failed to select order by ticket.CurrentOrderTicket:"+DoubleToStr(currentOrderTicket));
-   }
-   logger.print("updateTargetBreak: 0");
-  
-   double targetPips=MathAbs(targetLevel.targetPrice-targetLevel.initBidPrice)*KOEF;
-   double upperTargetLevel=OrderOpenPrice()+targetPips/KOEF;
-   double lowerTargetLevel=OrderOpenPrice()-targetPips/KOEF;
-   logger.print("updateTargetBreak:upperTargetLevel "+DoubleToStr(upperTargetLevel));  
-   logger.print("updateTargetBreak:minMaxTracker.getMaxLevel() "+DoubleToStr((minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF))); 
 
-   if (upperTargetLevel<minMaxTracker.getMaxLevel()-shared.getSpread()/KOEF){
-      logger.print("updateTargetBreak: 1");
-      targetLevelBreakManager.updateTargetBreakShift();
-   }
-
-   logger.print("updateTargetBreak:lowerTargetLevel "+DoubleToStr(lowerTargetLevel));  
-   logger.print("updateTargetBreak:minMaxTracker.getMinLevel() "+DoubleToStr((minMaxTracker.getMinLevel()+shared.getSpread()/KOEF))); 
-                        
-   if (lowerTargetLevel>minMaxTracker.getMinLevel()+shared.getSpread()/KOEF){
-      logger.print("updateTargetBreak: 2");
-      targetLevelBreakManager.updateTargetBreakShift();
-   }         
- }
- 
- void openOrder(double targetPrice){
+ void openOrder(double targetPrice,int orderType){
    // NOTE: direction should be in the way of longer Stop==> SL always will be less TP
    double sl=-1;
    double tp=-1;
-   int orderType;
    color    colorOrder; 
    
    
@@ -138,16 +76,15 @@ public:
    double pattern_tp=PATTERN_TP;   
    double H_pips=MathAbs(Bid-targetPrice);
    double openPrice;
-   if(targetPrice>Bid){
+   if(orderType==OP_BUY){
       // buy          
-      orderType=OP_BUY;
+      
       colorOrder=Blue;
       openPrice=Ask;      
       sl=openPrice-H_pips*pattern_sl;
       tp=openPrice+H_pips*pattern_tp;     
     }else{
       // sell
-      orderType=OP_SELL;
       colorOrder=Red;
       openPrice=Bid;
       sl=openPrice+H_pips*pattern_sl;
