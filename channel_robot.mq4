@@ -2,7 +2,6 @@
 #include <ResistanceLevelManager.mqh>
 #include <TrendDetector.mqh>
 #include <Logger.mqh>
-#include <TPSLAnalyser.mqh>
 
 
 input double PATTERN_SL=0.75;
@@ -12,26 +11,16 @@ const double MAX_LOSS_DOLLARS=50;
 const int    MIN_WORKING_CHANNEL=20;//pips 
 const int    SLIP_PIPS=20; 
 const int    WORK_PERIOD=50;//bars
-//+------------------------------------------------------------------+
-//|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
-//+------------------------------------------------------------------+
-
-struct TargetLevel{   
-   double targetPrice;
-   double initBidPrice;
-};
   
 class Channel_robot { 
    double KOEF;         
    int currentOrderTicket;
    Shared2 *shared;
    ResistanceLevelManager *levelManager;
-   TargetLevel targetLevel;
    Logger *logger;
    TrendDetector *trendDetector;
 public:  
- Channel_robot() {
-      
+ Channel_robot() {      
       shared = new Shared2(MAX_LOSS_DOLLARS); 
       KOEF = shared.getKoef();   
       currentOrderTicket = -1; 
@@ -44,9 +33,7 @@ public:
     if(OrdersTotal()==0){    
          trendDetector.update();
          if(levelManager.isBidCloseToLevel()){
-            double targetPrice=levelManager.getSimetricLevelPrice();            
-            targetLevel.targetPrice=targetPrice;
-            targetLevel.initBidPrice=Bid;
+            double targetPrice=levelManager.getSimetricLevelPrice();
             openOrder(targetPrice,trendDetector.getOrderType());
             levelManager.removeAllLevels();
          }
@@ -56,23 +43,20 @@ public:
          if(!setNonLoss()){
                closeOrder();
          }
-      }          
+    }          
  }
  
  void openOrder(double targetPrice,int orderType){
-   // NOTE: direction should be in the way of longer Stop==> SL always will be less TP
    double sl=-1;
    double tp=-1;
-   color    colorOrder; 
-   
-   
+   color  colorOrder;   
    double pattern_sl=PATTERN_SL;
-   double pattern_tp=PATTERN_TP;   
+   double pattern_tp=PATTERN_TP;     
    double H_pips=MathAbs(Bid-targetPrice);
    double openPrice;
+   
    if(orderType==OP_BUY){
-      // buy          
-      
+      // buy     
       colorOrder=Blue;
       openPrice=Ask;      
       sl=openPrice-H_pips*pattern_sl;
