@@ -4,18 +4,16 @@
 #include <Logger.mqh>
 #include <TPSLAnalyser.mqh>
 
-input double  MAX_LOSS_DOLLARS=50;
 
-const int    MIN_WORKING_CHANNEL=20; 
+input double PATTERN_SL=0.75;
+input double PATTERN_TP=0.95;
+
+const double MAX_LOSS_DOLLARS=50;
+const int    MIN_WORKING_CHANNEL=20;//pips 
 const int    SLIP_PIPS=20; 
-const int    WORK_PERIOD=50;
-const double PATTERN_SL=0.75;
-const double PATTERN_TP=0.95;
+const int    WORK_PERIOD=50;//bars
 //+------------------------------------------------------------------+
 //|                  SET SPREAD FOR TESTING to 1, NOT USE 0!!!                                                
-//+------------------------------------------------------------------+
-//+------------------------------------------------------------------+
-//|   startOneHourDelay  is valid only for 1 hour period                          
 //+------------------------------------------------------------------+
 
 struct TargetLevel{   
@@ -61,10 +59,6 @@ public:
       }          
  }
  
- 
-
- 
-
  void openOrder(double targetPrice,int orderType){
    // NOTE: direction should be in the way of longer Stop==> SL always will be less TP
    double sl=-1;
@@ -98,9 +92,8 @@ public:
   bool wasTimeOut(){  
       if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
          datetime orderTime = OrderOpenTime();
-         datetime currentTime=TimeCurrent();
-         datetime orderAgeHours=(currentTime-orderTime)/60/60;
-         if(orderAgeHours>=WORK_PERIOD*2){            
+         int shift=iBarShift(NULL,0,orderTime);
+         if(shift>=WORK_PERIOD){            
            return true;
          }      
       }  

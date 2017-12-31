@@ -111,8 +111,7 @@ class ResistanceLevelManager{
       int shift=getLowestShift();
       if(shift==NULL){return;}
       logger.print("updateLowerPeak 1");
-      double price=iLow(NULL,0,shift); 
-      if(lowerPeak.price!=-1&&lowerPeak.price>price){printf("BUG updateLowerPeak");}     
+      double price=iLow(NULL,0,shift);     
       int oppositeShift=iHighest(NULL,0,MODE_HIGH,shift,START_SHIFT);
       double oppositePrice=iHigh(NULL,0,oppositeShift);
       lowerPeak.oppositePrice=oppositePrice;
@@ -163,8 +162,7 @@ int getLowestShift(){
             logger.print("shift="+DoubleToStr(shift));
       if(shift==NULL){return;}
       double price=iHigh(NULL,0,shift);
-            logger.print("price="+DoubleToStr(price)); 
-      if(upperPeak.price!=-1&&upperPeak.price<price){printf("BUG updateUpperPeak");}      
+            logger.print("price="+DoubleToStr(price));  
       int oppositeShift=iLowest(NULL,0,MODE_LOW,shift,START_SHIFT);
       double oppositePrice=iLow(NULL,0,oppositeShift);
       upperPeak.oppositePrice=oppositePrice; 
