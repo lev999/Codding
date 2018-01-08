@@ -54,6 +54,7 @@ class ResistanceLevelManager{
          logger.print("isBidCloseToLevel 2");       
       }
       logger.print("isBidCloseToLevel 3");
+      
       return isPriceCloseToOneOfLevels();
    }
       
@@ -91,11 +92,25 @@ class ResistanceLevelManager{
    }else
    if(upperPeak.price!=-1&&Bid>(upperPeak.price+closeDelta)){
       removePeak(upperPeak);               
-   } 
+   }
+   removeOldPeaks(); 
  }
  
+ void removeOldPeaks(){
+   int upperPeakShift=iBarShift(NULL,0,upperPeak.time);
+   if(upperPeakShift>=WORK_PERIOD*2){            
+      removePeak(upperPeak);
+   }
+ 
+   int lowerPeakShift=iBarShift(NULL,0,lowerPeak.time);
+   if(lowerPeakShift>=WORK_PERIOD*2){            
+      removePeak(lowerPeak);
+   }  
+ }
+ 
+ 
  void removePeak(Peak& peak ){
-      ObjectDelete(0,DoubleToStr(peak.price));
+      //ObjectDelete(0,DoubleToStr(peak.price));
       ObjectDelete(0,DoubleToStr(peak.price+1));
       peak.price=-1;
  }
@@ -117,12 +132,9 @@ class ResistanceLevelManager{
       lowerPeak.oppositePrice=oppositePrice;
       if(lowerPeak.price!=price){
             ObjectDelete(0,DoubleToStr(lowerPeak.price));
-            ObjectDelete(0,DoubleToStr(lowerPeak.price+1));
-            
+            ObjectDelete(0,DoubleToStr(lowerPeak.price+1));            
             lowerPeak.price=price;
             lowerPeak.time=iTime(NULL,0,shift);
-                  
-            
             createObjectSymbol(lowerPeak);
             createObjectLine(lowerPeak);
       }
