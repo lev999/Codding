@@ -9,7 +9,7 @@ const double PATTERN_TP=1;
 const double MAX_LOSS_DOLLARS=50;
 const int    MIN_WORKING_CHANNEL=10;//pips 
 const int    SLIP_PIPS=5; 
-const int    WORK_PERIOD=1000;//bars
+const int    ORDER_LIFE_TIME=1000;//bars
 const int    SEARCH_HISTORY_PERIOD=50;
   
 class Channel_robot { 
@@ -78,7 +78,7 @@ public:
       if(OrderSelect(currentOrderTicket, SELECT_BY_TICKET)){
          datetime orderTime = OrderOpenTime();
          int shift=iBarShift(NULL,0,orderTime);
-         if(shift>=WORK_PERIOD){            
+         if(shift>=ORDER_LIFE_TIME){            
            return true;
          }      
       }  
