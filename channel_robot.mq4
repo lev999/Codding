@@ -1,6 +1,5 @@
 #include <Shared2.mqh>
 #include <ResistanceLevelManager.mqh>
-#include <TrendDetector.mqh>
 #include <Logger.mqh>
 
 
@@ -10,7 +9,8 @@ const double PATTERN_TP=1;
 const double MAX_LOSS_DOLLARS=50;
 const int    MIN_WORKING_CHANNEL=10;//pips 
 const int    SLIP_PIPS=5; 
-const int    WORK_PERIOD=50;//bars
+const int    WORK_PERIOD=1000;//bars
+const int    SEARCH_HISTORY_PERIOD=50;
   
 class Channel_robot { 
    double KOEF;         
@@ -18,37 +18,35 @@ class Channel_robot {
    Shared2 *shared;
    ResistanceLevelManager *levelManager;
    Logger *logger;
-   TrendDetector *trendDetector;
 public:  
  Channel_robot() {      
       shared = new Shared2(MAX_LOSS_DOLLARS); 
       KOEF = shared.getKoef();   
       currentOrderTicket = -1; 
-      levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,WORK_PERIOD,SLIP_PIPS,shared);
+      levelManager = new ResistanceLevelManager(MIN_WORKING_CHANNEL,SEARCH_HISTORY_PERIOD,SLIP_PIPS,shared);
       logger = new Logger(false);
-      trendDetector = new TrendDetector(WORK_PERIOD);
  } 
    
  void onTick(){               
     if(OrdersTotal()==0){        
          if(levelManager.isBidCloseToLevel()){
             double targetPrice=levelManager.getSimetricLevelPrice();
-            int orderType=trendDetector.getOrderType();
-            openOrder(targetPrice,orderType);            
+            openOrder(targetPrice);            
             levelManager.removeAllLevels();
          }
-     }
-    //}else if(wasTimeOut()){
-    //     logger.print("Order closing/nonLoss by timeOut");
-    //     if(!setNonLoss()){
-    //           closeOrder();
-    //     }
-    //}             
+     
+    }else if(wasTimeOut()){
+         logger.print("Order closing/nonLoss by timeOut");
+         if(!setNonLoss()){
+               closeOrder();
+         }
+    }             
  }
  
- void openOrder(double targetPrice,int orderType){
+ void openOrder(double targetPrice){
    double sl=-1;
    double tp=-1;
+   int orderType;
    color  colorOrder;   
    double pattern_sl=PATTERN_SL;
    double pattern_tp=PATTERN_TP;     
