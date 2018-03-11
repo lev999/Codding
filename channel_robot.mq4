@@ -3,12 +3,12 @@
 #include <Logger.mqh>
 
 
-const double PATTERN_SL=1;
-const double PATTERN_TP=1;
+const double PATTERN_SL=0.5;
+const double PATTERN_TP=0.95;
 
 const double MAX_LOSS_DOLLARS=50;
 const int    MIN_WORKING_CHANNEL=10;//pips 
-const int    SLIP_PIPS=5; 
+const int    SLIP_PIPS=2; 
 const int    ORDER_LIFE_TIME=1000;//bars
 const int    SEARCH_HISTORY_PERIOD=50;
   
